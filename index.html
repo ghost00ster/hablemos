@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#FFF8EE">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hablemos">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Hablemos · Terapeuta interactivo de lenguaje</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFF8EE; --card:#FFFFFF; --ink:#26283B; --muted:#6B6E85; --line:#E8E1D4;
+  --accent:#2F6FEB; --accent-2:#E8F0FF; --ok:#17A589; --warn:#E85D4A;
+  --p:#FFE066; --v:#9BE09B; --n:#FFBE85; --a:#9CCBFF; --s:#FFA8CB; --q:#CDB4FF; --x:#E4E4E4;
+  --tile-min:140px; --radius:20px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,.tile,.chip,.step,.cat,nav.tabs button{touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+img{-webkit-user-drag:none;-webkit-touch-callout:none}
+:focus-visible{outline:4px solid var(--accent);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){.tile:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(0,0,0,.08)}.cat:hover,.btn:hover,.sbtn:hover{filter:brightness(.96)}nav.tabs button:hover{background:#F5F1EA}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+html,body{margin:0;height:100%}
+body{font-family:Nunito,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--ink);
+  padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overscroll-behavior-y:none}
+button{font-family:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:16px}
+.hidden{display:none!important}
+
+/* header */
+header{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 14px 8px;background:var(--card);border-bottom:2px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{font-weight:900;font-size:20px;letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+.brand .dot{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#FFB570,#FF8FB8);display:grid;place-items:center;font-size:17px}
+.who{margin-left:auto;display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--muted)}
+.who b{color:var(--ink)}
+.fsbtn{border:2px solid var(--line);background:var(--card);border-radius:14px;width:42px;height:42px;font-size:18px}
+.lockbtn{border:2px solid var(--line);background:var(--card);border-radius:14px;width:42px;height:42px;font-size:20px;position:relative;overflow:hidden}
+.lockbtn .ring{position:absolute;inset:0;background:var(--accent-2);transform:scaleX(0);transform-origin:left;transition:none}
+.lockbtn span{position:relative}
+
+main{flex:1;padding:12px 12px calc(96px + env(safe-area-inset-bottom));max-width:1500px;width:100%;margin:0 auto}
+
+/* bottom nav */
+nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:2px solid var(--line);display:flex;justify-content:center;gap:4px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:6}
+nav.tabs button{flex:1;max-width:160px;border:0;background:none;border-radius:14px;padding:6px 4px;font-weight:800;font-size:13px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button .ic{font-size:24px;line-height:1}
+nav.tabs button.on{background:var(--accent-2);color:var(--accent)}
+
+/* sentence strip */
+.strip{display:flex;gap:8px;align-items:stretch;background:var(--card);border:2px solid var(--line);border-radius:var(--radius);padding:8px;margin-bottom:12px;position:sticky;top:var(--hdr,66px);z-index:4}
+.strip .words{flex:1;display:flex;gap:6px;overflow-x:auto;min-height:84px;align-items:center;padding:2px}
+.strip .ph{color:var(--muted);font-weight:700;padding:0 8px;font-size:15px}
+.chip{flex:0 0 auto;width:72px;height:80px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid rgba(0,0,0,.08);background:#fff;font-weight:800;font-size:12px;animation:pop .2s ease}
+.chip .pic{font-size:34px;line-height:1.1}
+.chip img{width:50px;height:50px;object-fit:cover;border-radius:8px}
+.chip.speaking{outline:4px solid var(--accent);outline-offset:1px}
+.sbtn{border:0;border-radius:16px;font-weight:900;font-size:15px;padding:0 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:64px}
+.sbtn .ic{font-size:26px}
+.sbtn.speak{background:var(--accent);color:#fff;min-width:88px}
+.sbtn.del{background:#F1ECE3}
+
+/* core row + categories */
+.core{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin-bottom:10px;padding:8px;border-radius:var(--radius);background:#F3EEE5}
+.cats{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin-bottom:2px}
+.cat{flex:0 0 auto;border:2px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-weight:800;font-size:15px;display:flex;gap:6px;align-items:center;white-space:nowrap}
+.cat .e{font-size:20px}
+.cat.on{border-color:var(--accent);background:var(--accent-2);color:var(--accent)}
+
+/* tiles */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile-min),1fr));gap:clamp(6px,1.2vw,14px)}
+.tile{aspect-ratio:1/1.05;max-width:calc(var(--tile-min) * 1.6);width:100%;justify-self:center;border-radius:var(--radius);border:3px solid rgba(0,0,0,.08);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px;font-weight:900;font-size:clamp(14px,calc(var(--tile-min) * .12),22px);box-shadow:0 3px 0 rgba(0,0,0,.08);transition:transform .08s;user-select:none;-webkit-user-select:none;text-align:center;line-height:1.1}
+.tile:active{transform:scale(.95)}
+.tile .pic{font-size:calc(var(--tile-min) * .46);line-height:1}
+.tile img{width:62%;aspect-ratio:1;object-fit:cover;border-radius:12px}
+.tile img.ar,.chip img.ar,.step img.ar,.bigpic img.ar{object-fit:contain;border-radius:0}
+.tile img.ar{width:74%;max-height:72%}
+.tile .pic.txt,.chip .pic.txt,.step .pic.txt{font-size:calc(var(--tile-min) * .3);font-weight:900;color:#444;line-height:1.2}
+.bigpic .pic{font-size:inherit}.bigpic .pic.txt{font-size:72px}
+.chip .pic.txt{font-size:22px}
+.step .pic.txt{font-size:40px}
+.tile .lbl{display:block}
+.core .tile{aspect-ratio:auto;padding:6px 4px;font-size:13px;gap:2px}
+.core .tile .pic{font-size:34px}
+.core .tile img{width:46px;height:46px}
+.tile.flash{animation:flash .5s ease}
+.fitz .t-p{background:#FFF4C2;border-color:var(--p)}
+.fitz .t-v{background:#DDF5DD;border-color:var(--v)}
+.fitz .t-n{background:#FFE6CF;border-color:var(--n)}
+.fitz .t-a{background:#DDEEFF;border-color:var(--a)}
+.fitz .t-s{background:#FFE0EC;border-color:var(--s)}
+.fitz .t-q{background:#ECE3FF;border-color:var(--q)}
+.fitz .t-x{background:#F2F2F2;border-color:var(--x)}
+.upper .tile .lbl,.upper .chip .lbl,.upper .bigword{text-transform:uppercase}
+
+body.low{--bg:#F6F6F4}
+body.low .tile{box-shadow:none}
+body.low.fitzwrap .tile{background:#fff}
+body.low *{animation:none!important;transition:none!important}
+.low .fitz .tile{background:#fff}
+
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes flash{0%{box-shadow:0 0 0 0 rgba(47,111,235,.6)}100%{box-shadow:0 0 0 18px rgba(47,111,235,0)}}
+
+/* panels */
+.panel{background:var(--card);border:2px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.panel h2{margin:0 0 4px;font-size:20px;font-weight:900}
+.panel h3{margin:14px 0 6px;font-size:16px;font-weight:900}
+.panel p.sub{margin:0 0 12px;color:var(--muted);font-weight:700;font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:150px;margin-bottom:10px}
+.field label{font-weight:800;font-size:13px;color:var(--muted)}
+.field input,.field select,.field textarea{border:2px solid var(--line);border-radius:12px;padding:10px;background:#fff;color:var(--ink)}
+.btn{border:0;border-radius:14px;padding:11px 16px;font-weight:900;font-size:15px;background:var(--accent);color:#fff}
+.btn.ghost{background:#F1ECE3;color:var(--ink)}
+.btn.danger{background:#FDE7E3;color:var(--warn)}
+.btn.ok{background:var(--ok)}
+.btn.small{padding:7px 11px;font-size:13px;border-radius:11px}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.check{display:flex;gap:10px;align-items:flex-start;border:2px solid var(--line);border-radius:14px;padding:10px;font-weight:800;font-size:14px;cursor:pointer}
+.check input{width:20px;height:20px;margin:0;flex:0 0 auto;accent-color:var(--accent)}
+.check.on{border-color:var(--accent);background:var(--accent-2)}
+.levels{display:grid;gap:8px}
+.lvl{display:flex;gap:12px;align-items:flex-start;border:2px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;text-align:left;background:#fff}
+.lvl.on{border-color:var(--accent);background:var(--accent-2)}
+.lvl .n{flex:0 0 32px;height:32px;border-radius:10px;background:#F1ECE3;display:grid;place-items:center;font-weight:900}
+.lvl.on .n{background:var(--accent);color:#fff}
+.lvl b{display:block;font-size:15px}
+.lvl small{color:var(--muted);font-weight:700;font-size:13px}
+.tips{background:#FFF3D6;border-radius:14px;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.45}
+.tips li{margin-bottom:6px}
+.note{font-size:12.5px;color:var(--muted);font-weight:700;margin-top:10px}
+
+/* editor */
+details.grp{border:2px solid var(--line);border-radius:14px;margin-bottom:8px;background:#fff}
+details.grp summary{padding:10px 12px;font-weight:900;cursor:pointer;display:flex;align-items:center;gap:8px;list-style:none}
+details.grp summary::-webkit-details-marker{display:none}
+details.grp summary .cnt{margin-left:auto;font-size:13px;color:var(--muted)}
+.wchips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px}
+.wchip{border:2px solid var(--line);background:#fff;border-radius:12px;padding:6px 10px;font-weight:800;font-size:14px;display:flex;gap:6px;align-items:center;opacity:.55}
+.wchip.on{opacity:1;border-color:var(--ok);background:#E5F7F3}
+.wchip img{width:26px;height:26px;border-radius:5px;object-fit:contain;background:#fff}
+.wchip .x{color:var(--warn);font-weight:900;margin-left:2px}
+
+/* practice */
+.prac{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.bigpic{width:min(300px,70vw);aspect-ratio:1;border-radius:32px;background:#fff;border:4px solid var(--line);display:grid;place-items:center;font-size:min(170px,40vw);line-height:1}
+.bigpic img{width:84%;height:84%;object-fit:cover;border-radius:20px}
+.bigword{font-size:clamp(36px,9vw,56px);font-weight:900;letter-spacing:.5px}
+.syls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;min-height:54px}
+.syl{font-size:clamp(24px,6vw,34px);font-weight:900;padding:4px 14px;border-radius:14px;background:#F1ECE3}
+.syl.on{background:var(--accent);color:#fff;transform:scale(1.12)}
+.syl.gap{background:none;padding:0 4px}
+.pbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.pbtns .btn{font-size:17px;padding:14px 18px}
+.score{font-weight:800;color:var(--muted)}
+.burst{position:fixed;inset:0;pointer-events:none;z-index:50;overflow:hidden}
+.burst span{position:absolute;font-size:34px;animation:fly 1.1s ease-out forwards}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(260deg);opacity:0}}
+
+/* agenda */
+.agenda{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px;align-items:stretch}
+.step{flex:0 0 150px;border-radius:var(--radius);background:#fff;border:3px solid var(--line);padding:10px;text-align:center;position:relative}
+.step .ord{font-weight:900;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.step .pic{font-size:72px;line-height:1.15}
+.step img{width:90px;height:90px;object-fit:cover;border-radius:14px}
+.step .lbl{font-weight:900;font-size:18px}
+.step.done{opacity:.35}
+.step.done::after{content:"✓";position:absolute;top:6px;right:10px;font-size:30px;color:var(--ok);font-weight:900;opacity:1}
+.step.now{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-2)}
+.step .rm{position:absolute;top:4px;left:6px;border:0;background:none;font-size:16px;color:var(--warn)}
+.arrow{align-self:center;font-size:30px;color:var(--muted);flex:0 0 auto}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;max-height:46vh;overflow:auto}
+.picker .tile{font-size:12px}
+.picker .tile .pic{font-size:36px}
+.picker .tile img.ar{width:70%}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(30,30,50,.45);display:grid;place-items:center;z-index:30;padding:14px}
+.modal .box{background:var(--bg);border-radius:24px;max-width:720px;width:100%;max-height:92vh;overflow:auto;padding:18px}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:14px;font-weight:800;z-index:60;font-size:14px}
+table.st{width:100%;border-collapse:collapse;font-size:14px;font-weight:700}
+table.st td,table.st th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+.bar{height:10px;background:#F1ECE3;border-radius:6px;overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%;background:var(--ok)}
+.legend{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;font-weight:800;margin-top:6px}
+.legend span{padding:3px 8px;border-radius:8px;border:2px solid}
+@media (max-width:560px){
+  .sbtn{min-width:52px;padding:0 8px;font-size:12px}
+  .sbtn.speak{min-width:66px}
+  .chip{width:62px;height:72px}
+  .chip .pic{font-size:28px}
+  .brand .t{display:none}
+}
+
+/* ---- Computadoras y tablets horizontales: menú lateral ---- */
+@media (min-width:900px) and (min-height:520px){
+  nav.tabs{top:var(--hdr,62px);bottom:0;right:auto;width:96px;flex-direction:column;justify-content:flex-start;border-top:0;border-right:2px solid var(--line);padding:12px 8px 12px calc(8px + env(safe-area-inset-left));gap:8px}
+  nav.tabs button{flex:0 0 auto;padding:12px 4px;font-size:13px}
+  nav.tabs button .ic{font-size:28px}
+  header{padding-left:calc(14px + env(safe-area-inset-left))}
+  main{padding:16px 20px 24px 116px;}
+  .toast{bottom:28px}
+  .panel{padding:20px 22px}
+  #main .panel.prac{padding:24px}
+}
+@media (min-width:1300px){main{padding-left:130px}.checks{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}}
+/* ---- Celulares: palabras núcleo en una sola fila deslizable ---- */
+@media (max-width:640px),(max-height:520px) and (orientation:landscape){
+  .core{display:flex;overflow-x:auto;gap:6px;padding:6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .core .tile{flex:0 0 78px;width:78px;max-width:none;aspect-ratio:auto;min-height:78px;scroll-snap-align:start}
+  .core .tile img{width:40px;height:40px}
+  .core .tile .lbl{font-size:11px}
+}
+/* ---- Celular horizontal / pantallas bajas ---- */
+@media (max-height:520px) and (orientation:landscape){
+  header{padding-top:calc(4px + env(safe-area-inset-top));padding-bottom:4px}
+  .brand .dot{width:26px;height:26px}
+  nav.tabs{padding-top:2px;padding-bottom:calc(2px + env(safe-area-inset-bottom))}
+  nav.tabs button{flex-direction:row;gap:6px;font-size:12px}
+  nav.tabs button .ic{font-size:20px}
+  main{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+  .strip{padding:4px;margin-bottom:6px}.strip .words{min-height:56px}.chip{height:54px;width:54px;font-size:10px}.chip img{width:30px;height:30px}.sbtn{min-width:56px;font-size:12px}
+  .core{margin-bottom:6px}.cats{padding-bottom:6px}.cat{padding:5px 10px;font-size:13px}
+  .sbtn .ic{font-size:20px}
+  .prac{flex-direction:row;flex-wrap:wrap;justify-content:center}
+  .bigpic{width:min(220px,40vh);}
+  .toast{bottom:64px}
+}
+/* ---- Pantallas muy pequeñas ---- */
+@media (max-width:360px){nav.tabs button{font-size:11px}.who span:last-child{display:none}}
+@supports not (aspect-ratio:1/1){.tile{height:calc(var(--tile-min) * 1.05)}.core .tile{height:auto;min-height:84px}.bigpic{height:min(300px,70vw)}.tile img{height:62%}}
+.nospeech{background:#FDE7E3;color:#8A2B1E;border-radius:14px;padding:10px 14px;font-weight:800;font-size:14px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="dot">💬</div><span class="t">Hablemos</span></div>
+  <div class="who" id="who"></div>
+  <button class="fsbtn hidden" id="fsBtn" title="Pantalla completa">⛶</button>
+  <button class="lockbtn" id="lockBtn" title="Modo niño"><div class="ring" id="lockRing"></div><span id="lockIc">🔓</span></button>
+</header>
+<main id="main"></main>
+<nav class="tabs" id="tabs"></nav>
+
+<script src="pictos.js"></script>
+<script>
+/* ============ VOCABULARIO BASE ============
+   [palabra, emoji, tipo, categoría, nivel, edadMín, edadMáx, (lo que dice)]
+   tipos (clave Fitzgerald): p persona · v acción · n cosa/lugar · a descripción/sentimiento · s social · q pregunta · x palabritas */
+const CATS=[
+ ['social','👋','Social'],['personas','👨‍👩‍👧','Personas'],['acciones','🏃','Acciones'],['comida','🍎','Comida'],
+ ['juego','🧸','Jugar'],['sentir','😊','Sentimientos'],['lugares','🏠','Lugares'],['cuerpo','🖐️','Cuerpo'],
+ ['describir','🎨','Cómo es'],['animales','🐶','Animales'],['preguntas','❓','Preguntas'],['palabritas','🔗','Palabritas']
+];
+const RAW=[
+ // social
+ ['sí','👍','s','social',1],['no','👎','s','social',1],['más','➕','s','social',1],['ayuda','🆘','s','social',1],
+ ['ya terminé','✅','s','social',2],['hola','👋','s','social',2],['adiós','🤚','s','social',2],['gracias','🙏','s','social',2],
+ ['por favor','🥺','s','social',2],['otra vez','🔁','s','social',2],['espera','⏳','s','social',3],['me gusta','❤️','s','social',3],
+ ['no me gusta','💔','s','social',3],['perdón','🙇','s','social',4],['no sé','🤷','s','social',4],
+ // personas
+ ['mamá','👩','p','personas',2],['papá','👨','p','personas',2],['yo','🙋','p','personas',2],['hermano','👦','p','personas',2],
+ ['hermana','👧','p','personas',2],['abuela','👵','p','personas',2],['abuelo','👴','p','personas',2],['maestra','👩‍🏫','p','personas',2],
+ ['amigo','🧑‍🤝‍🧑','p','personas',3],['tú','👉','p','personas',3],['doctor','🧑‍⚕️','p','personas',3],
+ ['él','🧍‍♂️','p','personas',4],['ella','🧍‍♀️','p','personas',4],['nosotros','👨‍👩‍👧‍👦','p','personas',4],
+ // acciones
+ ['comer','🍽️','v','acciones',1],['quiero','🫴','v','acciones',2],['beber','🥤','v','acciones',2],['jugar','🤸','v','acciones',2],
+ ['dormir','😴','v','acciones',2],['pintar','🖌️','v','acciones',2],['abrazo','🤗','v','acciones',2],
+ ['ir','🚶','v','acciones',3],['ver','👁️','v','acciones',3],['dar','🎁','v','acciones',3],['abrir','📦','v','acciones',3],
+ ['leer','📖','v','acciones',3],['escuchar','🎧','v','acciones',3],['bailar','💃','v','acciones',3],['cantar','🎤','v','acciones',3],
+ ['lavar','🧼','v','acciones',3],['salir','🚪','v','acciones',3],['correr','🏃','v','acciones',3],['necesito','❗','v','acciones',3],
+ ['cerrar','🔒','v','acciones',4],['vestir','👕','v','acciones',4],['sentar','🪑','v','acciones',4],['puedo','💪','v','acciones',4],
+ ['estar','📍','v','acciones',5],['tener','🤲','v','acciones',5],['hacer','🛠️','v','acciones',5],
+ // comida
+ ['agua','💧','n','comida',1],['leche','🥛','n','comida',2],['jugo','🧃','n','comida',2],['pan','🍞','n','comida',2],
+ ['manzana','🍎','n','comida',2],['banano','🍌','n','comida',2],['galleta','🍪','n','comida',2],['dulce','🍬','n','comida',2],
+ ['helado','🍦','n','comida',2],['pupusa','🫓','n','comida',3],['frijoles','🫘','n','comida',3],['pizza','🍕','n','comida',3],
+ ['huevo','🥚','n','comida',3],['arroz','🍚','n','comida',3],['pollo','🍗','n','comida',3],['queso','🧀','n','comida',3],
+ ['sandía','🍉','n','comida',3],['sopa','🍲','n','comida',4],
+ // juego
+ ['pelota','⚽','n','juego',2],['carro','🚗','n','juego',2],['música','🎵','n','juego',2],['tablet','📲','n','juego',2],
+ ['tele','📺','n','juego',2],['muñeca','🪆','n','juego',2,2,9],['bloques','🧱','n','juego',2,2,9],['burbujas','🫧','n','juego',2,2,9],
+ ['resbaladera','🛝','n','juego',3,2,12],['rompecabezas','🧩','n','juego',3],['crayolas','🖍️','n','juego',3,2,12],['libro','📚','n','juego',3],
+ ['videojuego','🎮','n','juego',3,6,18],['celular','📱','n','juego',3,10,18],['deporte','🏀','n','juego',3,8,18],['dibujar','✏️','v','juego',3,8,18],
+ // sentir
+ ['feliz','😊','a','sentir',2],['triste','😢','a','sentir',2],['enojado','😠','a','sentir',2],['dolor','🤕','a','sentir',2],
+ ['hambre','🤤','a','sentir',2],['cansado','🥱','a','sentir',3],['miedo','😨','a','sentir',3],['tranquilo','😌','a','sentir',3],
+ ['sed','🫗','a','sentir',3],['ruido','🔊','a','sentir',3],['frío','🥶','a','sentir',3],['calor','🥵','a','sentir',3],
+ ['sorprendido','😮','a','sentir',4],['aburrido','😑','a','sentir',4],['nervioso','😬','a','sentir',4,8,18],
+ // lugares
+ ['baño','🚽','n','lugares',2],['casa','🏠','n','lugares',2],['escuela','🏫','n','lugares',2],['parque','🌳','n','lugares',3],
+ ['cama','🛏️','n','lugares',3],['tienda','🏪','n','lugares',3],['afuera','🌤️','n','lugares',3],['cocina','🍳','n','lugares',4],
+ ['hospital','🏥','n','lugares',4],['iglesia','⛪','n','lugares',4],['playa','🏖️','n','lugares',4],
+ // cuerpo
+ ['mano','✋','n','cuerpo',3],['pie','🦶','n','cuerpo',3],['boca','👄','n','cuerpo',3],['ojos','👀','n','cuerpo',3],
+ ['nariz','👃','n','cuerpo',3],['oreja','👂','n','cuerpo',3],['cabeza','💆','n','cuerpo',3],['panza','🫄','n','cuerpo',3],
+ ['dientes','🦷','n','cuerpo',4],['pelo','💇','n','cuerpo',4],
+ // describir
+ ['grande','🐘','a','describir',3],['pequeño','🐭','a','describir',3],['rico','😋','a','describir',3],
+ ['caliente','🔥','a','describir',4],['rápido','⚡','a','describir',4],['lento','🐢','a','describir',4],['bonito','🌸','a','describir',4],
+ ['feo','🤢','a','describir',4],['rojo','🔴','a','describir',4],['azul','🔵','a','describir',4],['verde','🟢','a','describir',4],
+ ['amarillo','🟡','a','describir',4],['mucho','🧺','a','describir',4],['poco','🤏','a','describir',4],['nuevo','✨','a','describir',5],
+ // animales
+ ['perro','🐶','n','animales',2],['gato','🐱','n','animales',2],['pollito','🐥','n','animales',2,2,9],['pájaro','🐦','n','animales',3],
+ ['pez','🐟','n','animales',3],['vaca','🐄','n','animales',3],['caballo','🐴','n','animales',3],['mariposa','🦋','n','animales',4],
+ // preguntas
+ ['qué','❓','q','preguntas',4],['dónde','🗺️','q','preguntas',4],['quién','👤','q','preguntas',4],
+ ['cuándo','🕐','q','preguntas',5],['por qué','🤔','q','preguntas',5],['cómo','💭','q','preguntas',5],['cuánto','🔢','q','preguntas',5],
+ // palabritas (gramática)
+ ['el','▫️','x','palabritas',5],['la','▫️','x','palabritas',5],['un','1️⃣','x','palabritas',5],['una','1️⃣','x','palabritas',5],
+ ['y','➕','x','palabritas',5],['con','🔗','x','palabritas',5],['en','📥','x','palabritas',5],['de','↪️','x','palabritas',5],
+ ['a','➡️','x','palabritas',5],['para','🎯','x','palabritas',5],['mi','🫵','x','palabritas',5],['también','🔂','x','palabritas',5]
+];
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_');
+const AR_IMG=window.ARASAAC_IMG||{},AR_MAP=window.ARASAAC_MAP||{};
+const BASE=RAW.map(r=>({id:norm(r[0])+(r[3]==='palabritas'?'_x':''),w:r[0],e:r[1],t:r[2],c:r[3],lvl:r[4],amin:r[5]||2,amax:r[6]||99,ar:AR_MAP[r[0]]||null}));
+const CORE_IDS=['yo','quiero','no','si','mas','ayuda','ya_termine'];
+
+const LEVELS=[
+ {n:1,name:'Inicio de la comunicación',desc:'Aún no usa palabras: señala, jala de la mano o llora para pedir. Se trabaja la intención: pedir, rechazar y “más”.',tile:[175,150]},
+ {n:2,name:'Palabras sueltas',desc:'Dice o intenta pocas palabras aisladas. Se amplía el vocabulario de uso diario, una palabra a la vez.',tile:[145,125]},
+ {n:3,name:'Une 2 palabras',desc:'Empieza a combinar (“quiero agua”, “mamá ven”). Se trabaja palabra núcleo + palabra nueva.',tile:[120,108],strip:3},
+ {n:4,name:'Frases simples',desc:'Arma frases de 3–4 palabras. Se agregan acciones, descripciones y lugares.',tile:[106,96],strip:6},
+ {n:5,name:'Frases completas',desc:'Usa frases y empieza a preguntar. Se trabaja gramática: artículos, conectores y preguntas.',tile:[96,88],strip:12}
+];
+const CONDS={
+ retraso:{name:'Retraso del lenguaje',tip:'Nombra en voz alta cada pictograma que toque y agrega una palabra más (“¡agua! quieres agua”).'},
+ tea:{name:'Autismo (TEA)',rate:-.08,low:true,tip:'Deja los pictogramas siempre en el mismo lugar y usa la Agenda “Primero → Después” para anticipar. Espera 5–10 segundos antes de ayudar.'},
+ tdl:{name:'TDL / TEL',fitz:true,gram:true,tip:'Los colores marcan la función de cada palabra. Armen frases siguiendo el orden: amarillo (quién) → verde (acción) → naranja (qué).'},
+ apraxia:{name:'Apraxia del habla',rate:-.18,syl:true,tip:'En Practicar usa “Por sílabas”: muchas repeticiones cortas de pocas palabras, mirando la boca del adulto.'},
+ down:{name:'Síndrome de Down',rate:-.12,big:1,tip:'Pictogramas grandes y voz lenta. Acompaña con señas o gestos: la comunicación total impulsa el habla.'},
+ tdah:{name:'TDAH',big:1,low:true,tip:'Sesiones cortas (5–10 min), pocos pictogramas a la vez y celebración inmediata.'},
+ motor:{name:'Dificultad motora / PC',big:1,deb:true,tip:'Botones grandes y protección contra toques repetidos. Acomoda el dispositivo a su alcance.'},
+ auditiva:{name:'Pérdida auditiva',rate:-.1,tip:'Sube el volumen del dispositivo y cuida que vea tu cara al modelar cada palabra.'}
+};
+const PRAISE=['¡Muy bien!','¡Excelente!','¡Lo lograste!','¡Qué bien lo dijiste!','¡Bravo!','¡Súper!'];
+
+/* ============ ESTADO ============ */
+const KEY='hablemos_v1';
+let S=load();
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.profiles)return s}catch(e){}return{profiles:[],active:null,custom:[],customCats:[]}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const P=()=>S.profiles.find(p=>p.id===S.active);
+const ALL=()=>BASE.concat(S.custom||[]);
+const CATSALL=()=>CATS.concat((S.customCats||[]).map(c=>[c.id,c.e,c.name]));
+const W=id=>ALL().find(w=>w.id===id);
+let view='hablar', curCat=null, sentence=[], locked=false;
+
+function recommend(p){
+  const c=p.conds||[];
+  const gram=c.includes('tdl');
+  return ALL().filter(w=>{
+    if(p.age<w.amin||p.age>w.amax)return false;
+    let lv=w.lvl;
+    if(gram&&(w.c==='palabritas'||w.c==='preguntas'))lv-=1;
+    if(w.custom)return true;
+    return lv<=p.level;
+  }).map(w=>w.id);
+}
+function presetSettings(p){
+  const c=(p.conds||[]).map(k=>CONDS[k]).filter(Boolean);
+  let rate=.9;c.forEach(x=>rate+=x.rate||0);
+  return{
+    rate:Math.max(.55,Math.round(rate*100)/100),
+    fitz:p.level>=3||c.some(x=>x.fitz),
+    low:c.some(x=>x.low),
+    deb:c.some(x=>x.deb),
+    big:c.reduce((m,x)=>Math.max(m,x.big||0),0),
+    syl:c.some(x=>x.syl)||p.level<=2,
+    upper:p.age<=7,
+    sym:(p.settings&&p.settings.sym)||'arasaac',
+    voice:(p.settings&&p.settings.voice)||''
+  };
+}
+function newProfile(d){
+  const p={id:'p'+Date.now(),name:d.name||'Mi peque',age:+d.age||5,level:+d.level||2,conds:d.conds||[],stats:{},agenda:[],avatar:d.avatar||'🧒'};
+  p.settings=presetSettings(p);p.enabled=recommend(p);return p;
+}
+
+/* ============ VOZ ============ */
+let voices=[];
+function loadVoices(){try{voices=speechSynthesis.getVoices().filter(v=>/^es([-_]|$)/i.test(v.lang))}catch(e){voices=[]}}
+setTimeout(loadVoices,400);setTimeout(loadVoices,1500);
+try{loadVoices();speechSynthesis.onvoiceschanged=()=>{loadVoices();if(view==='ajustes')render()}}catch(e){}
+function pickVoice(){
+  const want=P()?.settings.voice;
+  if(want){const v=voices.find(v=>v.voiceURI===want);if(v)return v}
+  const pref=['es-MX','es-US','es-419','es-SV','es-GT','es-CO','es-AR','es-ES'];const L=v=>v.lang.replace('_','-').toLowerCase();
+  for(const l of pref){const ll=l.toLowerCase();const v=voices.find(v=>L(v)===ll&&/google|natural|neural|online|paulina|mónica|monica|sabina|dalia|jorge|ximena/i.test(v.name))||voices.find(v=>L(v)===ll);if(v)return v}
+  return voices[0]||null;
+}
+function speak(text,opt={}){
+  return new Promise(res=>{
+    try{
+      if(!opt.queue)speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang='es-419';const v=pickVoice();if(v){u.voice=v;u.lang=v.lang}
+      u.rate=(opt.rate||P()?.settings.rate||.9);u.pitch=opt.pitch||1.05;u.volume=1;
+      u.onend=()=>res();u.onerror=()=>res();
+      speechSynthesis.speak(u);try{if(speechSynthesis.paused)speechSynthesis.resume()}catch(_){}
+      setTimeout(res,Math.max(1500,text.length*260/u.rate));
+    }catch(e){toast('Este navegador no tiene voz disponible');res()}
+  });
+}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ============ SÍLABAS ============ */
+const STRONG='aeoáéó',ACCW='íú',INSEP=['pr','br','tr','dr','cr','gr','fr','pl','bl','cl','gl','fl','kr','kl','tl'];
+const isV=c=>c.length===1&&'aeiouáéíóúü'.includes(c);
+function syl1(w){
+  const s=w.toLowerCase();const u=[];
+  for(let i=0;i<s.length;i++){const two=s.substr(i,2);
+    if(['ch','ll','rr'].includes(two)){u.push(two);i++;continue}
+    if((two==='qu'||two==='gu')&&'eéií'.includes(s[i+2]||'')){u.push(two);i++;continue}
+    u.push(s[i])}
+  const segs=[];for(const x of u){const t=isV(x)?'V':'C';if(segs.length&&segs[segs.length-1].t===t)segs[segs.length-1].a.push(x);else segs.push({t,a:[x]})}
+  const parts=[];
+  for(const g of segs){if(g.t==='C'){parts.push(g);continue}
+    let nuc=[g.a[0]];
+    for(let k=1;k<g.a.length;k++){const p=g.a[k-1],c=g.a[k];
+      const hi=(STRONG.includes(p)&&STRONG.includes(c))||(ACCW.includes(c))||(ACCW.includes(p))||p===c;
+      if(hi){parts.push({t:'V',s:nuc.join('')});parts.push({t:'C',a:[]});nuc=[c]}else nuc.push(c)}
+    parts.push({t:'V',s:nuc.join('')})}
+  const out=[];let onset='',i=0;
+  if(parts[0]&&parts[0].t==='C'){onset=parts[0].a.join('');i=1}
+  for(;i<parts.length;i++){const p=parts[i];
+    if(p.t==='V'){out.push(onset+p.s);onset='';continue}
+    const a=p.a;if(i===parts.length-1){if(out.length)out[out.length-1]+=a.join('');else onset+=a.join('');continue}
+    let coda=[],ons=[];const n=a.length;
+    if(n===1)ons=a;else if(n>1){if(INSEP.includes(a.slice(-2).join(''))){coda=a.slice(0,n-2);ons=a.slice(-2)}else{coda=a.slice(0,n-1);ons=a.slice(-1)}}
+    if(out.length)out[out.length-1]+=coda.join('');onset=ons.join('')}
+  return out.length?out:[w];
+}
+const silabas=t=>t.trim().split(/\s+/).map(syl1);
+
+/* ============ UTILIDADES ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function srcOf(w){if(w.img)return{src:w.img,cls:'ph'};const st=P()?.settings;if((st?.sym||'arasaac')==='arasaac'&&w.ar&&AR_IMG[w.ar])return{src:AR_IMG[w.ar],cls:'ar'};return null}
+const pic=w=>{const s=srcOf(w);if(s)return`<img class="${s.cls}" src="${s.src}" alt="">`;if(w.c==='palabritas'&&(P()?.settings.sym||'arasaac')==='arasaac')return`<span class="pic txt">${esc(w.w)}</span>`;return`<span class="pic">${w.e||'⬜'}</span>`};
+const tile=(w,extra='')=>`<button class="tile t-${w.t}" data-id="${w.id}" ${extra}>${pic(w)}<span class="lbl">${esc(w.w)}</span></button>`;
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+function burst(){if(P()?.settings.low)return;const b=document.createElement('div');b.className='burst';
+  const em=['⭐','🎉','✨','🌟','💛','🎈'];
+  for(let i=0;i<16;i++){const s=document.createElement('span');s.textContent=em[i%em.length];
+    s.style.left='50%';s.style.top='45%';s.style.setProperty('--dx',(Math.random()*500-250)+'px');s.style.setProperty('--dy',(Math.random()*-380-40)+'px');b.appendChild(s)}
+  document.body.appendChild(b);setTimeout(()=>b.remove(),1200)}
+let lastTap=0;
+function tapOk(){const p=P();const now=Date.now();if(p?.settings.deb&&now-lastTap<700)return false;lastTap=now;return true}
+function fileToThumb(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');const k=Math.min(1,240/Math.max(img.width,img.height));c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.85))};img.src=r.result};r.readAsDataURL(file)})}
+function enabledWords(){const p=P();const set=new Set(p.enabled);return ALL().filter(w=>set.has(w.id))}
+
+/* ============ RENDER GENERAL ============ */
+function applyLook(){
+  const p=P();if(!p)return;const st=p.settings;
+  document.body.classList.toggle('low',!!st.low);
+  const L=LEVELS[p.level-1];
+  document.documentElement.style.setProperty('--tile-min',tileSize(L,st)+'px');
+  const hd=document.querySelector('header');if(hd)document.documentElement.style.setProperty('--hdr',hd.offsetHeight+'px');
+  $('#who').innerHTML=`<span style="font-size:22px">${p.avatar}</span><b>${esc(p.name)}</b><span>· ${p.age} años · N${p.level}</span>`;
+}
+/* Tamaño de pictograma según la pantalla: celular, tablet, iPad, computadora */
+function tileSize(L,st){
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const side=vw>=900&&vh>=520?116:0;               // menú lateral
+  const avail=Math.max(260,Math.min(vw-side-24,1500));
+  const short=Math.min(vw,vh);
+  // factor: celular ~0.72, tablet ~1, pantalla grande hasta 1.35
+  let f=short<480?0.72:short<700?0.86:short<1000?1:1.15;
+  if(vw>1600)f=1.3;
+  if(vh<520&&vw>vh)f=Math.min(f,0.72);               // celular horizontal
+  let px=Math.round(L.tile[0]*f+(st.big?26*f:0));
+  // al menos 2 columnas y que quepa bien en pantallas angostas
+  px=Math.min(px,Math.floor((avail-12)/2));
+  return Math.max(84,px);
+}
+function renderTabs(){
+  const t=[['hablar','💬','Hablar'],['practicar','🗣️','Practicar'],['agenda','🗓️','Agenda'],['ajustes','⚙️','Ajustes']].filter(x=>!(locked&&x[0]==='ajustes'));
+  $('#tabs').innerHTML=t.map(x=>`<button data-v="${x[0]}" class="${view===x[0]?'on':''}"><span class="ic">${x[1]}</span>${x[2]}</button>`).join('');
+}
+function render(){
+  if(!P()){onboarding();return}
+  applyLook();renderTabs();requestAnimationFrame(()=>{const hd=document.querySelector('header');if(hd)document.documentElement.style.setProperty('--hdr',hd.offsetHeight+'px')});
+  ({hablar:rHablar,practicar:rPracticar,agenda:rAgenda,ajustes:rAjustes})[view]();
+  window.scrollTo&&view!=='hablar'&&0;
+}
+$('#tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;try{speechSynthesis.cancel()}catch(_){};render();window.scrollTo(0,0)};
+
+/* ============ HABLAR ============ */
+function rHablar(){
+  const p=P(),st=p.settings,L=LEVELS[p.level-1];
+  const words=enabledWords();
+  const useStrip=!!L.strip;
+  const wrap=`<div class="${st.fitz?'fitz':''} ${st.upper?'upper':''}">`;
+  let h=(!('speechSynthesis' in window))?`<div class="nospeech">🔇 Este navegador no tiene voz. Prueba con Chrome, Safari o Edge actualizados.</div>`:'';
+  h+=wrap;
+  if(useStrip){
+    h+=`<div class="strip"><div class="words" id="sw">${stripHTML()}</div>
+      <button class="sbtn del" id="sBack"><span class="ic">⌫</span>Borrar</button>
+      <button class="sbtn speak" id="sSpeak"><span class="ic">🔊</span>Decir</button></div>`;
+  }
+  if(!words.length){h+=`<div class="panel"><h2>No hay palabras activas</h2><p class="sub">Ve a Ajustes → Grupos de palabras para activar vocabulario.</p></div></div>`;$('#main').innerHTML=h;return}
+  if(p.level<=2){
+    h+=`<div class="grid" id="grid">${words.map(w=>tile(w)).join('')}</div>`;
+  }else{
+    const core=CORE_IDS.map(W).filter(w=>w&&p.enabled.includes(w.id));
+    const cats=CATSALL().filter(c=>words.some(w=>w.c===c[0]&&!CORE_IDS.includes(w.id)));
+    if(!curCat||!cats.find(c=>c[0]===curCat))curCat=cats[0]?.[0];
+    if(core.length)h+=`<div class="core" id="core">${core.map(w=>tile(w)).join('')}</div>`;
+    h+=`<div class="cats" id="cats">${cats.map(c=>`<button class="cat ${c[0]===curCat?'on':''}" data-c="${c[0]}"><span class="e">${c[1]}</span>${esc(c[2])}</button>`).join('')}</div>`;
+    h+=`<div class="grid" id="grid">${words.filter(w=>w.c===curCat&&!CORE_IDS.includes(w.id)).map(w=>tile(w)).join('')}</div>`;
+  }
+  h+='</div><p class="note" style="text-align:center">Pictogramas: Sergio Palao · ARASAAC · CC BY-NC-SA · Gobierno de Aragón</p>';
+  $('#main').innerHTML=h;
+  $('#main').onclick=async e=>{
+    const c=e.target.closest('.cat');if(c){curCat=c.dataset.c;rHablar();return}
+    const t=e.target.closest('.tile');
+    if(t){if(!tapOk())return;const w=W(t.dataset.id);t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash');
+      speak(w.say||w.w);
+      if(useStrip){if(sentence.length>=L.strip){toast(`Frase de hasta ${L.strip} palabras en este nivel`);return}sentence.push(w.id);$('#sw').innerHTML=stripHTML();const sw=$('#sw');sw.scrollLeft=sw.scrollWidth}
+      return}
+    if(e.target.closest('#sBack')){sentence.pop();$('#sw').innerHTML=stripHTML();return}
+    if(e.target.closest('#sSpeak')){await sayStrip();return}
+    const ch=e.target.closest('.chip');if(ch){sentence.splice(+ch.dataset.i,1);$('#sw').innerHTML=stripHTML()}
+  };
+  let pressT;const sb=$('#sBack');
+  if(sb){sb.onpointerdown=()=>{pressT=setTimeout(()=>{sentence=[];$('#sw').innerHTML=stripHTML();toast('Frase borrada')},700)};sb.onpointerup=sb.onpointerleave=()=>clearTimeout(pressT)}
+}
+function stripHTML(){
+  if(!sentence.length)return`<span class="ph">Toca pictogramas para armar tu frase…</span>`;
+  return sentence.map((id,i)=>{const w=W(id);return w?`<div class="chip t-${w.t}" data-i="${i}">${pic(w)}<span class="lbl">${esc(w.w)}</span></div>`:''}).join('');
+}
+async function sayStrip(){
+  if(!sentence.length)return;
+  const chips=[...document.querySelectorAll('#sw .chip')];
+  const txt=sentence.map(id=>{const w=W(id);return w.say||w.w}).join(' ');
+  chips.forEach(c=>c.classList.add('speaking'));
+  await speak(txt);
+  chips.forEach(c=>c.classList.remove('speaking'));
+}
+
+/* ============ PRACTICAR ============ */
+let pr={cat:'todas',i:0,order:[],sylMode:null};
+function practiceList(){const ws=enabledWords().filter(w=>w.c!=='palabritas');return pr.cat==='todas'?ws:ws.filter(w=>w.c===pr.cat)}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function rPracticar(){
+  const p=P();const list=practiceList();
+  if(pr.sylMode===null)pr.sylMode=!!p.settings.syl;
+  if(!pr.order.length||pr.order.some(id=>!list.find(w=>w.id===id)))pr.order=shuffle(list.map(w=>w.id)),pr.i=0;
+  const cats=CATSALL().filter(c=>enabledWords().some(w=>w.c===c[0]&&c[0]!=='palabritas'));
+  const w=W(pr.order[pr.i%pr.order.length]);
+  const st=w?(p.stats[w.id]||{a:0,s:0}):null;
+  let h=`<div class="${p.settings.upper?'upper':''}"><div class="cats"><button class="cat ${pr.cat==='todas'?'on':''}" data-c="todas"><span class="e">🌈</span>Todas</button>${cats.map(c=>`<button class="cat ${c[0]===pr.cat?'on':''}" data-c="${c[0]}"><span class="e">${c[1]}</span>${esc(c[2])}</button>`).join('')}</div>`;
+  if(!w){$('#main').innerHTML=h+`<div class="panel"><h2>Sin palabras para practicar</h2></div></div>`;return}
+  const sy=silabas(w.say||w.w);
+  h+=`<div class="panel prac">
+    <div class="bigpic" id="bp">${pic(w)}</div>
+    <div class="bigword">${esc(w.w)}</div>
+    <div class="syls" id="syls">${sy.map((ws,k)=>ws.map(s=>`<span class="syl">${esc(s)}</span>`).join('')+(k<sy.length-1?'<span class="syl gap"> </span>':'')).join('')}</div>
+    <div class="pbtns">
+      <button class="btn" id="pListen">🔊 Escuchar</button>
+      <button class="btn ghost" id="pSyl">🐢 Por sílabas</button>
+    </div>
+    <div class="pbtns">
+      <button class="btn ok" id="pYes">✅ ¡Lo dijo!</button>
+      <button class="btn ghost" id="pTry">🔄 Casi · otra vez</button>
+      <button class="btn ghost" id="pNext">➡️ Siguiente</button>
+    </div>
+    <div class="score">${st.a?`Logros en esta palabra: ${st.s} de ${st.a} intentos`:'Primera vez con esta palabra'} · ${pr.i%pr.order.length+1}/${pr.order.length}</div>
+  </div>
+  <div class="panel"><h3 style="margin-top:0">¿Cómo practicar?</h3><div class="tips"><ol style="margin:0;padding-left:18px">
+    <li>Toca <b>Escuchar</b> y di la palabra junto con la voz, mirándole a los ojos.</li>
+    <li>Espera unos segundos a que lo intente. Cualquier aproximación cuenta.</li>
+    <li>Si le cuesta, usa <b>Por sílabas</b>: escucha cada parte despacio y la repiten juntos.</li>
+    <li>Marca <b>¡Lo dijo!</b> para celebrar y registrar su avance.</li></ol></div></div></div>`;
+  $('#main').innerHTML=h;
+  const syl=async()=>{const els=[...document.querySelectorAll('#syls .syl:not(.gap)')];
+    for(let k=0;k<els.length;k++){els.forEach(e=>e.classList.remove('on'));els[k].classList.add('on');await speak(els[k].textContent,{rate:Math.max(.5,(p.settings.rate||.9)-.2)});await wait(380)}
+    els.forEach(e=>e.classList.remove('on'));await wait(250);await speak(w.say||w.w,{rate:Math.max(.55,(p.settings.rate||.9)-.1)})};
+  $('#main').onclick=async e=>{
+    const c=e.target.closest('.cat');if(c){pr.cat=c.dataset.c;pr.order=[];rPracticar();return}
+    const id=e.target.closest('button')?.id;
+    if(id==='pListen'||e.target.closest('#bp'))speak(w.say||w.w);
+    if(id==='pSyl')syl();
+    if(id==='pYes'){rec(w.id,1);burst();await speak(PRAISE[Math.floor(Math.random()*PRAISE.length)]);pr.i++;rPracticar()}
+    if(id==='pTry'){rec(w.id,0);if(pr.sylMode)syl();else speak(w.say||w.w,{rate:Math.max(.55,(p.settings.rate||.9)-.15)})}
+    if(id==='pNext'){pr.i++;rPracticar()}
+  };
+  setTimeout(()=>speak(w.say||w.w),250);
+}
+function rec(id,ok){const p=P();const s=p.stats[id]||(p.stats[id]={a:0,s:0,d:0});s.a++;if(ok)s.s++;s.d=Date.now();save()}
+
+/* ============ AGENDA ============ */
+function rAgenda(){
+  const p=P();p.agenda=p.agenda||[];p.done=p.done||[];
+  const ord=i=>p.agenda.length===2?['Primero','Después'][i]:(i===0?'Primero':i===p.agenda.length-1?'Al final':'Después');
+  const nowIdx=p.agenda.findIndex((_,i)=>!p.done.includes(i));
+  let h=`<div class="${p.settings.upper?'upper':''}"><div class="panel"><h2>🗓️ Agenda visual</h2><p class="sub">Anticipa lo que va a pasar. Toca un paso para escucharlo; mantén presionado para marcarlo como hecho.</p>`;
+  if(p.agenda.length){
+    h+=`<div class="agenda">${p.agenda.map((id,i)=>{const w=W(id);if(!w)return'';return(i?'<span class="arrow">➜</span>':'')+`<div class="step ${p.done.includes(i)?'done':''} ${i===nowIdx?'now':''}" data-i="${i}">${locked?'':`<button class="rm" data-rm="${i}">✕</button>`}<div class="ord">${ord(i)}</div>${pic(w)}<div class="lbl">${esc(w.w)}</div></div>`}).join('')}</div>
+    <div class="row" style="margin-top:6px"><button class="btn" id="aSay">🔊 Decir la agenda</button><button class="btn ghost" id="aReset">↺ Reiniciar</button>${locked?'':'<button class="btn danger" id="aClear">Vaciar</button>'}</div>`;
+  }else h+=`<div class="tips">Agrega 2 pasos para un tablero “Primero → Después”, o más para la rutina del día.</div>`;
+  h+='</div>';
+  if(!locked){
+    const ws=enabledWords().filter(w=>w.c!=='palabritas');
+    h+=`<div class="panel"><h3 style="margin-top:0">Agregar paso</h3><div class="picker ${p.settings.fitz?'fitz':''}" id="apick">${ws.map(w=>tile(w)).join('')}</div></div>`;
+  }
+  $('#main').innerHTML=h+'</div>';
+  let pt,long=false;
+  $('#main').onpointerdown=e=>{const s=e.target.closest('.step');if(!s)return;long=false;pt=setTimeout(()=>{long=true;const i=+s.dataset.i;p.done.includes(i)?p.done.splice(p.done.indexOf(i),1):(p.done.push(i),burst());save();rAgenda()},600)};
+  $('#main').onpointerup=()=>clearTimeout(pt);
+  $('#main').onclick=async e=>{
+    const rm=e.target.closest('[data-rm]');if(rm){const i=+rm.dataset.rm;p.agenda.splice(i,1);p.done=[];save();rAgenda();return}
+    const s=e.target.closest('.step');if(s&&!long){const w=W(p.agenda[+s.dataset.i]);speak(`${ord(+s.dataset.i)}, ${w.say||w.w}`);return}
+    const t=e.target.closest('#apick .tile');if(t){if(p.agenda.length>=8){toast('Máximo 8 pasos');return}p.agenda.push(t.dataset.id);save();rAgenda();return}
+    const id=e.target.closest('button')?.id;
+    if(id==='aSay'){for(let i=0;i<p.agenda.length;i++){const w=W(p.agenda[i]);if(!w)continue;await speak(`${ord(i)}, ${w.say||w.w}`);await wait(250)}}
+    if(id==='aReset'){p.done=[];save();rAgenda()}
+    if(id==='aClear'){p.agenda=[];p.done=[];save();rAgenda()}
+  };
+}
+
+/* ============ AJUSTES ============ */
+const AVATARS=['🧒','👦','👧','🧑','👶','🦁','🐼','🦊','🐸','🚀','⭐','🌈'];
+function profileForm(d){
+  return `
+  <div class="row"><div class="field"><label>Nombre</label><input id="fName" value="${esc(d.name||'')}" placeholder="Nombre del niño o joven"></div>
+  <div class="field" style="max-width:130px"><label>Edad (años)</label><input id="fAge" type="number" min="2" max="25" value="${d.age||5}"></div></div>
+  <div class="field"><label>Ícono</label><div class="row" id="fAv">${AVATARS.map(a=>`<button type="button" class="btn ghost small" data-a="${a}" style="font-size:22px;${a===(d.avatar||'🧒')?'outline:3px solid var(--accent)':''}">${a}</button>`).join('')}</div></div>
+  <h3>¿Cómo se comunica hoy?</h3>
+  <div class="levels" id="fLvl">${LEVELS.map(l=>`<button type="button" class="lvl ${l.n===(d.level||2)?'on':''}" data-l="${l.n}"><span class="n">${l.n}</span><span><b>${l.name}</b><small>${l.desc}</small></span></button>`).join('')}</div>
+  <h3>Diagnóstico o condición <span style="font-weight:700;color:var(--muted);font-size:13px">(puedes marcar varias)</span></h3>
+  <div class="checks" id="fCond">${Object.entries(CONDS).map(([k,c])=>`<label class="check ${(d.conds||[]).includes(k)?'on':''}"><input type="checkbox" value="${k}" ${(d.conds||[]).includes(k)?'checked':''}><span>${c.name}</span></label>`).join('')}</div>`;
+}
+function readForm(){
+  return{name:$('#fName').value.trim()||'Mi peque',age:Math.max(2,+$('#fAge').value||5),
+    level:+($('#fLvl .lvl.on')?.dataset.l||2),conds:[...document.querySelectorAll('#fCond input:checked')].map(i=>i.value),
+    avatar:$('#fAv [style*="outline"]')?.dataset.a||'🧒'};
+}
+function wireForm(root){
+  root.addEventListener('click',e=>{
+    const l=e.target.closest('.lvl');if(l){root.querySelectorAll('.lvl').forEach(x=>x.classList.toggle('on',x===l))}
+    const a=e.target.closest('[data-a]');if(a){root.querySelectorAll('[data-a]').forEach(x=>x.style.outline=x===a?'3px solid var(--accent)':'')}
+  });
+  root.addEventListener('change',e=>{const c=e.target.closest('.check');if(c)c.classList.toggle('on',e.target.checked)});
+}
+function onboarding(){
+  $('#tabs').innerHTML='';$('#who').innerHTML='';
+  $('#main').innerHTML=`<div class="panel" id="ob"><h2>👋 ¡Bienvenido a Hablemos!</h2>
+   <p class="sub">Un tablero de comunicación con pictogramas y voz en español. Cuéntanos sobre quién lo va a usar y armamos su vocabulario a la medida. Todo se puede cambiar después.</p>
+   ${profileForm({})}
+   <div class="row" style="margin-top:16px"><button class="btn" id="obGo">Crear tablero ✨</button></div>
+   <p class="note">Hablemos es una herramienta de apoyo para familias y terapeutas; no reemplaza la evaluación ni la terapia con un profesional del lenguaje.</p><p class="note">Pictogramas: Sergio Palao. Origen: <a href="https://arasaac.org" target="_blank" rel="noopener">ARASAAC</a>. Licencia: CC BY-NC-SA. Propiedad: Gobierno de Aragón (España).</p></div>`;
+  wireForm($('#ob'));
+  $('#obGo').onclick=()=>{const p=newProfile(readForm());S.profiles.push(p);S.active=p.id;save();view='hablar';speak(`Hola ${p.name}`);render()};
+}
+function rAjustes(){
+  const p=P(),st=p.settings;
+  const tips=[LEVELS[p.level-1]].map(l=>`<li><b>Nivel ${l.n}:</b> ${l.desc}</li>`).concat((p.conds||[]).map(k=>`<li><b>${CONDS[k].name}:</b> ${CONDS[k].tip}</li>`));
+  const stats=Object.entries(p.stats||{}).map(([id,s])=>({w:W(id),...s})).filter(x=>x.w).sort((a,b)=>b.d-a.d).slice(0,40);
+  const allW=ALL().filter(w=>p.age>=w.amin&&p.age<=w.amax||w.custom);
+  let h=`
+  <div class="panel"><h2>${p.avatar} Perfil</h2>
+    <div class="row" style="margin-bottom:10px">
+      <select id="pSel" class="btn ghost" style="flex:1;min-width:160px">${S.profiles.map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${x.avatar} ${esc(x.name)}</option>`).join('')}</select>
+      <button class="btn ghost" id="pNew">＋ Nuevo perfil</button>
+    </div>
+    <div id="pf">${profileForm(p)}</div>
+    <div class="row" style="margin-top:14px"><button class="btn" id="pSave">Guardar y recomendar vocabulario</button><button class="btn ghost" id="pSaveOnly">Guardar sin cambiar palabras</button><button class="btn danger" id="pDel">Eliminar perfil</button></div>
+  </div>
+  <div class="panel"><h2>💡 Recomendaciones para las sesiones</h2><div class="tips"><ul style="margin:0;padding-left:18px">${tips.join('')}</ul></div></div>
+  <div class="panel"><h2>🔊 Voz</h2><p class="sub">${voices.length?`${voices.length} voces en español disponibles en este dispositivo.`:'No se detectaron voces en español; se usará la voz predeterminada. En Android instala “Voz de Google” y en iPhone descarga una voz en Ajustes → Accesibilidad → Contenido leído.'}</p>
+    <div class="row"><div class="field"><label>Voz</label><select id="vSel"><option value="">Automática (español latino)</option>${voices.map(v=>`<option value="${esc(v.voiceURI)}" ${v.voiceURI===st.voice?'selected':''}>${esc(v.name)} (${v.lang})</option>`).join('')}</select></div>
+    <div class="field"><label>Velocidad: <span id="rVal">${st.rate}</span></label><input type="range" id="rate" min="0.5" max="1.2" step="0.05" value="${st.rate}"></div>
+    <button class="btn ghost" id="vTest">▶ Probar</button></div>
+  </div>
+  <div class="panel"><h2>🖥️ Pantalla</h2>
+  <div class="field" style="max-width:420px"><label>Tipo de imagen</label><select id="symSel"><option value="arasaac" ${(st.sym||'arasaac')==='arasaac'?'selected':''}>Pictogramas ARASAAC (recomendado)</option><option value="emoji" ${st.sym==='emoji'?'selected':''}>Emojis</option></select></div>
+  <div class="checks">
+    ${[['fitz','Colores por tipo de palabra (clave Fitzgerald)'],['upper','Texto en MAYÚSCULAS'],['low','Baja estimulación (sin animaciones, colores suaves)'],['deb','Evitar toques repetidos accidentales'],['big','Pictogramas más grandes'],['syl','Practicar por sílabas al repetir']].map(([k,l])=>`<label class="check ${st[k]?'on':''}"><input type="checkbox" data-s="${k}" ${st[k]?'checked':''}><span>${l}</span></label>`).join('')}
+  </div>
+  <div class="legend"><span style="background:#FFF4C2;border-color:var(--p)">Personas</span><span style="background:#DDF5DD;border-color:var(--v)">Acciones</span><span style="background:#FFE6CF;border-color:var(--n)">Cosas y lugares</span><span style="background:#DDEEFF;border-color:var(--a)">Cómo es / siente</span><span style="background:#FFE0EC;border-color:var(--s)">Social</span><span style="background:#ECE3FF;border-color:var(--q)">Preguntas</span><span style="background:#F2F2F2;border-color:var(--x)">Palabritas</span></div></div>
+  <div class="panel"><h2>🧩 Grupos de palabras</h2><p class="sub">Toca una palabra para activarla o desactivarla en el tablero de ${esc(p.name)}. Activas: <b>${p.enabled.length}</b>.</p>
+    ${CATSALL().map(c=>{const ws=allW.filter(w=>w.c===c[0]);if(!ws.length&&!c[0].startsWith('c_'))return'';const on=ws.filter(w=>p.enabled.includes(w.id)).length;
+      return`<details class="grp"><summary><span style="font-size:22px">${c[1]}</span>${esc(c[2])}<span class="cnt">${on}/${ws.length}</span></summary>
+      <div class="row" style="padding:0 12px 8px"><button class="btn small ghost" data-all="${c[0]}">Activar todas</button><button class="btn small ghost" data-none="${c[0]}">Ninguna</button>${c[0].startsWith('c_')?`<button class="btn small danger" data-delcat="${c[0]}">Borrar grupo</button>`:''}</div>
+      <div class="wchips">${ws.map(w=>`<button class="wchip ${p.enabled.includes(w.id)?'on':''}" data-tg="${w.id}">${(()=>{const s=srcOf(w);return s?`<img src="${s.src}">`:w.e})()} ${esc(w.w)}${w.custom?`<span class="x" data-delw="${w.id}">✕</span>`:''}</button>`).join('')}</div></details>`}).join('')}
+    <h3>＋ Agregar palabra propia</h3>
+    <p class="sub">Ideal para nombres de familia, mascotas, comidas o lugares de su vida diaria. Puedes usar una foto real.</p>
+    <div class="row"><div class="field"><label>Palabra</label><input id="nW" placeholder="ej. Firulais"></div>
+    <div class="field"><label>Lo que dice la voz (opcional)</label><input id="nSay" placeholder="ej. quiero ir con Firulais"></div></div>
+    <div class="row"><div class="field" style="max-width:120px"><label>Emoji</label><input id="nE" placeholder="🐕" maxlength="8"></div>
+    <div class="field"><label>…o foto / pictograma</label><input id="nImg" type="file" accept="image/*"></div></div>
+    <p class="note" style="margin-top:0">¿Necesitas otro pictograma? Búscalo en <a href="https://arasaac.org/pictograms/search" target="_blank" rel="noopener">arasaac.org</a> (Pictogramas → buscar → descargar PNG) y súbelo aquí.</p>
+    <div class="row"><div class="field"><label>Grupo</label><select id="nC">${CATSALL().map(c=>`<option value="${c[0]}">${c[1]} ${esc(c[2])}</option>`).join('')}</select></div>
+    <div class="field"><label>Tipo de palabra</label><select id="nT"><option value="n">Cosa o lugar</option><option value="p">Persona</option><option value="v">Acción</option><option value="a">Cómo es / siente</option><option value="s">Social</option><option value="q">Pregunta</option></select></div></div>
+    <button class="btn" id="nAdd">Agregar palabra</button>
+    <h3>＋ Crear grupo nuevo</h3>
+    <div class="row"><div class="field" style="max-width:110px"><label>Emoji</label><input id="gE" placeholder="🏖️" maxlength="8"></div><div class="field"><label>Nombre del grupo</label><input id="gN" placeholder="ej. Mi rutina de la mañana"></div><button class="btn ghost" id="gAdd">Crear grupo</button></div>
+  </div>
+  <div class="panel"><h2>📈 Progreso en Practicar</h2>${stats.length?`<table class="st"><tr><th>Palabra</th><th>Logros</th><th></th></tr>${stats.map(x=>`<tr><td>${(()=>{const s=srcOf(x.w);return s?`<img src="${s.src}" style="width:26px;height:26px;object-fit:contain;vertical-align:middle">`:x.w.e})()} ${esc(x.w.w)}</td><td>${x.s}/${x.a}</td><td><div class="bar"><i style="width:${Math.round(x.s/x.a*100)}%"></i></div></td></tr>`).join('')}</table><button class="btn small danger" id="stClr" style="margin-top:10px">Borrar progreso</button>`:'<p class="sub">Aún no hay prácticas registradas.</p>'}</div>
+  <div class="panel"><h2>💾 Respaldo</h2><p class="sub">Los datos se guardan solo en este navegador. Copia el respaldo para pasarlo a otro dispositivo y pégalo allá.</p>
+    <div class="row"><button class="btn ghost" id="bCopy">Copiar respaldo</button><button class="btn ghost" id="bShow">Pegar respaldo…</button></div>
+    <div id="bBox" class="hidden" style="margin-top:10px"><div class="field"><textarea id="bTxt" rows="4" placeholder="Pega aquí el respaldo"></textarea></div><button class="btn" id="bLoad">Cargar respaldo</button></div>
+    <p class="note">Hablemos es una herramienta de apoyo para familias y terapeutas; no reemplaza la evaluación ni la terapia con un profesional del lenguaje.</p><p class="note">Pictogramas: Sergio Palao. Origen: <a href="https://arasaac.org" target="_blank" rel="noopener">ARASAAC</a>. Licencia: CC BY-NC-SA. Propiedad: Gobierno de Aragón (España).</p></div>`;
+  $('#main').innerHTML=h;wireForm($('#pf'));
+  const m=$('#main');
+  m.onclick=async e=>{
+    const b=e.target.closest('button,[data-delw]');if(!b)return;
+    if(b.dataset.delw!==undefined&&e.target.closest('[data-delw]')){const id=e.target.closest('[data-delw]').dataset.delw;S.custom=S.custom.filter(w=>w.id!==id);S.profiles.forEach(x=>x.enabled=x.enabled.filter(i=>i!==id));save();rAjustes();return}
+    if(b.dataset.tg){const id=b.dataset.tg;const i=p.enabled.indexOf(id);i>=0?p.enabled.splice(i,1):p.enabled.push(id);b.classList.toggle('on');save();const d=b.closest('details');const ws=allW.filter(w=>w.c===d.querySelector('[data-all]').dataset.all);d.querySelector('.cnt').textContent=`${ws.filter(w=>p.enabled.includes(w.id)).length}/${ws.length}`;return}
+    if(b.dataset.all){allW.filter(w=>w.c===b.dataset.all).forEach(w=>{if(!p.enabled.includes(w.id))p.enabled.push(w.id)});save();keepOpen(b.dataset.all);return}
+    if(b.dataset.none){const ids=allW.filter(w=>w.c===b.dataset.none).map(w=>w.id);p.enabled=p.enabled.filter(i=>!ids.includes(i));save();keepOpen(b.dataset.none);return}
+    if(b.dataset.delcat){const c=b.dataset.delcat;S.customCats=S.customCats.filter(x=>x.id!==c);const ids=S.custom.filter(w=>w.c===c).map(w=>w.id);S.custom=S.custom.filter(w=>w.c!==c);S.profiles.forEach(x=>x.enabled=x.enabled.filter(i=>!ids.includes(i)));save();rAjustes();return}
+    switch(b.id){
+      case'pSave':case'pSaveOnly':{const d=readForm();Object.assign(p,d);if(b.id==='pSave'){const voice=p.settings.voice,sym=p.settings.sym;p.settings=presetSettings(p);p.settings.voice=voice;p.settings.sym=sym||'arasaac';p.enabled=recommend(p);toast(`Vocabulario recomendado: ${p.enabled.length} palabras`)}else toast('Perfil guardado');sentence=[];save();render();break}
+      case'pNew':{const np=newProfile({name:'Nuevo perfil'});S.profiles.push(np);S.active=np.id;save();render();toast('Perfil creado: completa sus datos');break}
+      case'pDel':{if(b.dataset.sure){S.profiles=S.profiles.filter(x=>x.id!==p.id);S.active=S.profiles[0]?.id||null;save();render()}else{b.dataset.sure=1;b.textContent='Toca de nuevo para confirmar'}break}
+      case'vTest':speak(`Hola ${p.name}, ¿quieres jugar?`);break;
+      case'nAdd':{const w=$('#nW').value.trim();if(!w){toast('Escribe la palabra');return}
+        const f=$('#nImg').files[0];const img=f?await fileToThumb(f):null;
+        const nw={id:'u_'+norm(w)+'_'+Date.now().toString(36),w,say:$('#nSay').value.trim()||undefined,e:$('#nE').value.trim()||'⭐',img,t:$('#nT').value,c:$('#nC').value,lvl:1,amin:0,amax:99,custom:true};
+        S.custom.push(nw);p.enabled.push(nw.id);save();toast(`“${w}” agregada`);rAjustes();break}
+      case'gAdd':{const n=$('#gN').value.trim();if(!n){toast('Escribe el nombre del grupo');return}S.customCats.push({id:'c_'+Date.now().toString(36),name:n,e:$('#gE').value.trim()||'📁'});save();toast('Grupo creado: agrégale palabras');rAjustes();break}
+      case'stClr':p.stats={};save();rAjustes();break;
+      case'bCopy':try{await navigator.clipboard.writeText(JSON.stringify(S));toast('Respaldo copiado')}catch(_){$('#bBox').classList.remove('hidden');$('#bTxt').value=JSON.stringify(S);$('#bTxt').select();toast('Copia el texto seleccionado')}break;
+      case'bShow':$('#bBox').classList.toggle('hidden');break;
+      case'bLoad':try{const d=JSON.parse($('#bTxt').value);if(!d.profiles)throw 0;S=d;save();render();toast('Respaldo cargado')}catch(_){toast('El respaldo no es válido')}break;
+    }
+  };
+  m.onchange=e=>{
+    if(e.target.id==='pSel'){S.active=e.target.value;sentence=[];pr={cat:'todas',i:0,order:[],sylMode:null};save();render();return}
+    if(e.target.id==='symSel'){st.sym=e.target.value;save();rAjustes();return}
+    if(e.target.id==='vSel'){st.voice=e.target.value;save();speak('Hola');return}
+    if(e.target.dataset.s){st[e.target.dataset.s]=e.target.checked;if(e.target.dataset.s==='big')st.big=e.target.checked?1:0;e.target.closest('.check').classList.toggle('on',e.target.checked);if(e.target.dataset.s==='syl')pr.sylMode=e.target.checked;save();applyLook()}
+  };
+  m.oninput=e=>{if(e.target.id==='rate'){st.rate=+e.target.value;$('#rVal').textContent=st.rate;save()}};
+  $('#rate').onchange=()=>speak('Así voy a hablar');
+  function keepOpen(c){rAjustes();const d=document.querySelector(`[data-all="${c}"]`)?.closest('details');if(d){d.open=true;d.scrollIntoView({block:'center'})}}
+}
+
+/* ============ MODO NIÑO (bloqueo) ============ */
+(function(){
+  const b=$('#lockBtn'),ring=$('#lockRing');let t,start;
+  const set=()=>{$('#lockIc').textContent=locked?'🔒':'🔓';b.title=locked?'Mantén presionado 2 s para desbloquear':'Modo niño: oculta Ajustes'};
+  b.onclick=()=>{if(!locked){locked=true;if(view==='ajustes')view='hablar';set();render();toast('Modo niño activo · mantén 🔒 2 s para salir')}};
+  b.onpointerdown=()=>{if(!locked)return;start=Date.now();ring.style.transition='transform 2s linear';ring.style.transform='scaleX(1)';t=setTimeout(()=>{locked=false;set();render();toast('Ajustes desbloqueados')},2000)};
+  const cancel=()=>{clearTimeout(t);ring.style.transition='none';ring.style.transform='scaleX(0)'};
+  b.onpointerup=b.onpointerleave=b.onpointercancel=cancel;
+  set();
+})();
+let rsT;const onResize=()=>{clearTimeout(rsT);rsT=setTimeout(()=>{if(P())applyLook()},120)};
+window.addEventListener('resize',onResize);window.addEventListener('orientationchange',onResize);
+try{screen.orientation&&screen.orientation.addEventListener('change',onResize)}catch(_){}
+/* Evitar menú contextual / lupa al mantener presionado en tablets y celulares */
+document.addEventListener('contextmenu',e=>{if(e.target.closest('.tile,.chip,.step,#lockBtn,#sBack,.bigpic'))e.preventDefault()});
+/* Evitar zoom con doble toque en iOS antiguos */
+let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTouch<350&&e.target.closest('.tile,.sbtn,.chip'))e.preventDefault();lastTouch=n},{passive:false});
+/* Pantalla completa (tablets, computadoras y Android; iPhone no lo permite) */
+(function(){const b=$('#fsBtn');const d=document.documentElement;
+  const req=d.requestFullscreen||d.webkitRequestFullscreen;const ex=document.exitFullscreen||document.webkitExitFullscreen;
+  if(!req||/iPhone|iPod/.test(navigator.userAgent))return;b.classList.remove('hidden');
+  b.onclick=()=>{try{const fs=document.fullscreenElement||document.webkitFullscreenElement;const r=fs?ex.call(document):req.call(d);if(r&&r.catch)r.catch(()=>toast('Este navegador no permite pantalla completa aquí'))}catch(_){toast('Este navegador no permite pantalla completa aquí')}};
+})();
+/* Desbloquear la voz en iOS/Safari con el primer toque */
+let voiceUnlocked=false;document.addEventListener('pointerdown',()=>{if(voiceUnlocked)return;voiceUnlocked=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(_){}} ,{once:true,capture:true});
+/* Teclado: flechas para moverse entre pictogramas en computadora */
+document.addEventListener('keydown',e=>{const t=document.activeElement;if(!t||!t.classList||!t.classList.contains('tile'))return;
+  const g=t.parentElement;const items=[...g.querySelectorAll('.tile')];const i=items.indexOf(t);
+  const cols=Math.max(1,Math.round(g.clientWidth/t.offsetWidth));
+  const m={ArrowRight:1,ArrowLeft:-1,ArrowDown:cols,ArrowUp:-cols}[e.key];if(m){const n=items[i+m];if(n){n.focus();e.preventDefault()}}});
+render();
+if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
