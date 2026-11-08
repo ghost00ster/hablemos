@@ -254,6 +254,7 @@ table.st td,table.st th{padding:7px 6px;border-bottom:1px solid var(--line);text
 <nav class="tabs" id="tabs"></nav>
 
 <script src="pictos.js"></script>
+<script src="audio.js"></script>
 <script>
 /* ============ VOCABULARIO BASE ============
    [palabra, emoji, tipo, categoría, nivel, edadMín, edadMáx, (lo que dice)]
@@ -380,6 +381,7 @@ function presetSettings(p){
     syl:c.some(x=>x.syl)||p.level<=2,
     upper:p.age<=7,
     sym:(p.settings&&p.settings.sym)||'arasaac',
+    voz:(p.settings&&p.settings.voz)||'grabada',
     voice:(p.settings&&p.settings.voice)||''
   };
 }
@@ -414,6 +416,55 @@ function speak(text,opt={}){
   });
 }
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ============ AUDIOS GRABADOS (funcionan en todos los navegadores) ============ */
+const AUD=window.HAB_AUDIO||{};
+let actx=null;const bufCache={};let curSrc=null,curEl=null,playToken=0;
+function unlockAudio(){try{if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C()}if(actx&&actx.state==='suspended')actx.resume()}catch(_){}}
+function b64ToBuf(b){const bin=atob(b);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer}
+function stopAll(){playToken++;try{curSrc&&curSrc.stop()}catch(_){}curSrc=null;try{if(curEl){curEl.pause();curEl=null}}catch(_){}try{speechSynthesis.cancel()}catch(_){}}
+function decode(key,b64){
+  if(bufCache[key])return bufCache[key];
+  const raw=b64.startsWith('data:')?b64.split(',')[1]:b64;
+  bufCache[key]=new Promise((res,rej)=>{try{const r=actx.decodeAudioData(b64ToBuf(raw),res,rej);if(r&&r.then)r.then(res,rej)}catch(e){rej(e)}});
+  bufCache[key].catch(()=>{delete bufCache[key]});return bufCache[key];
+}
+async function playB64(key,b64,rate,tok){
+  if(tok!==playToken)return;
+  const pr=Math.min(1.2,Math.max(.75,rate||1));
+  if(actx){
+    try{
+      if(actx.state==='suspended')await actx.resume();
+      const buf=await decode(key,b64);if(tok!==playToken)return;
+      await new Promise(res=>{const src=actx.createBufferSource();src.buffer=buf;src.playbackRate.value=pr;src.connect(actx.destination);src.onended=res;curSrc=src;src.start(0);setTimeout(res,buf.duration/pr*1000+400)});
+      return;
+    }catch(_){}
+  }
+  await new Promise(res=>{try{const el=new Audio(b64.startsWith('data:')?b64:'data:audio/mpeg;base64,'+b64);el.playbackRate=pr;curEl=el;el.onended=res;el.onerror=res;const pp=el.play();if(pp&&pp.catch)pp.catch(res);setTimeout(res,8000)}catch(_){res()}});
+}
+const hasDeviceVoice=()=>{try{return 'speechSynthesis' in window&&voices.length>0}catch(_){return false}};
+let WORDIDX=null;
+function wordIdx(){if(!WORDIDX){WORDIDX={};BASE.forEach(w=>{const k=norm(w.w);if(!WORDIDX[k]||w.c!=='palabritas')WORDIDX[k]=w.id})}return WORDIDX}
+const wordPart=w=>({k:'w:'+w.id,t:w.say||w.w,data:w.rec||null});
+/* parts: [{k:clave de audio, t:texto, data:audio propio}] */
+async function talk(parts,opt={}){
+  if(!opt.keep)stopAll();const tok=playToken;unlockAudio();
+  const st=P()?.settings||{};const mode=st.voz||'grabada';
+  if(mode==='dispositivo'&&hasDeviceVoice()&&!parts.some(p=>p.data)){await speak(parts.map(p=>p.t).join(' '),opt);return}
+  const userRate=(opt.rate||st.rate||.9)/.9;
+  for(let i=0;i<parts.length;i++){
+    if(tok!==playToken)return;const p=parts[i];const data=p.data||AUD[p.k];
+    if(data){await playB64(p.data?('r:'+p.k):p.k,data,opt.raw?1:userRate,tok)}
+    else{
+      // armar la frase con palabras grabadas, si todas existen
+      const ids=p.t.split(/\s+/).map(x=>wordIdx()[norm(x).replace(/_/g,'')]||wordIdx()[norm(x)]);
+      if(ids.length&&ids.every(id=>id&&AUD['w:'+id])){for(let j=0;j<ids.length;j++){if(tok!==playToken)return;await playB64('w:'+ids[j],AUD['w:'+ids[j]],userRate,tok);await wait(90)}}
+      else if('speechSynthesis' in window){await speak(p.t,opt)}
+    }
+    if(i<parts.length-1)await wait(opt.gap!=null?opt.gap:120);
+  }
+}
+const sayWord=(w,opt)=>talk([wordPart(w)],opt);
 
 /* ============ SÍLABAS ============ */
 const STRONG='aeoáéó',ACCW='íú',INSEP=['pr','br','tr','dr','cr','gr','fr','pl','bl','cl','gl','fl','kr','kl','tl'];
@@ -495,7 +546,7 @@ function render(){
   ({hablar:rHablar,practicar:rPracticar,agenda:rAgenda,ajustes:rAjustes})[view]();
   window.scrollTo&&view!=='hablar'&&0;
 }
-$('#tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;try{speechSynthesis.cancel()}catch(_){};render();window.scrollTo(0,0)};
+$('#tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;stopAll();render();window.scrollTo(0,0)};
 
 /* ============ HABLAR ============ */
 function rHablar(){
@@ -503,7 +554,7 @@ function rHablar(){
   const words=enabledWords();
   const useStrip=!!L.strip;
   const wrap=`<div class="${st.fitz?'fitz':''} ${st.upper?'upper':''}">`;
-  let h=(!('speechSynthesis' in window))?`<div class="nospeech">🔇 Este navegador no tiene voz. Prueba con Chrome, Safari o Edge actualizados.</div>`:'';
+  let h=(!('speechSynthesis' in window)&&!Object.keys(AUD).length)?`<div class="nospeech">🔇 Este navegador no tiene voz. Prueba con Chrome, Safari o Edge actualizados.</div>`:'';
   h+=wrap;
   if(useStrip){
     h+=`<div class="strip"><div class="words" id="sw">${stripHTML()}</div>
@@ -527,7 +578,7 @@ function rHablar(){
     const c=e.target.closest('.cat');if(c){curCat=c.dataset.c;rHablar();return}
     const t=e.target.closest('.tile');
     if(t){if(!tapOk())return;const w=W(t.dataset.id);t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash');
-      speak(w.say||w.w);
+      sayWord(w);
       if(useStrip){if(sentence.length>=L.strip){toast(`Frase de hasta ${L.strip} palabras en este nivel`);return}sentence.push(w.id);$('#sw').innerHTML=stripHTML();const sw=$('#sw');sw.scrollLeft=sw.scrollWidth}
       return}
     if(e.target.closest('#sBack')){sentence.pop();$('#sw').innerHTML=stripHTML();return}
@@ -544,9 +595,8 @@ function stripHTML(){
 async function sayStrip(){
   if(!sentence.length)return;
   const chips=[...document.querySelectorAll('#sw .chip')];
-  const txt=sentence.map(id=>{const w=W(id);return w.say||w.w}).join(' ');
   chips.forEach(c=>c.classList.add('speaking'));
-  await speak(txt);
+  await talk(sentence.map(id=>wordPart(W(id))));
   chips.forEach(c=>c.classList.remove('speaking'));
 }
 
@@ -585,19 +635,19 @@ function rPracticar(){
     <li>Si le cuesta, usa <b>Por sílabas</b>: escucha cada parte despacio y la repiten juntos.</li>
     <li>Marca <b>¡Lo dijo!</b> para celebrar y registrar su avance.</li></ol></div></div></div>`;
   $('#main').innerHTML=h;
-  const syl=async()=>{const els=[...document.querySelectorAll('#syls .syl:not(.gap)')];
-    for(let k=0;k<els.length;k++){els.forEach(e=>e.classList.remove('on'));els[k].classList.add('on');await speak(els[k].textContent,{rate:Math.max(.5,(p.settings.rate||.9)-.2)});await wait(380)}
-    els.forEach(e=>e.classList.remove('on'));await wait(250);await speak(w.say||w.w,{rate:Math.max(.55,(p.settings.rate||.9)-.1)})};
+  const syl=async()=>{const els=[...document.querySelectorAll('#syls .syl:not(.gap)')];stopAll();const tok=playToken;
+    for(let k=0;k<els.length;k++){if(tok!==playToken)return;els.forEach(e=>e.classList.remove('on'));els[k].classList.add('on');const sy=els[k].textContent;await talk([{k:'s:'+sy,t:sy}],{keep:true,raw:true,rate:Math.max(.5,(p.settings.rate||.9)-.2)});await wait(380)}
+    els.forEach(e=>e.classList.remove('on'));await wait(250);if(tok!==playToken)return;await sayWord(w,{keep:true,rate:Math.max(.55,(p.settings.rate||.9)-.1)})};
   $('#main').onclick=async e=>{
     const c=e.target.closest('.cat');if(c){pr.cat=c.dataset.c;pr.order=[];rPracticar();return}
     const id=e.target.closest('button')?.id;
-    if(id==='pListen'||e.target.closest('#bp'))speak(w.say||w.w);
+    if(id==='pListen'||e.target.closest('#bp'))sayWord(w);
     if(id==='pSyl')syl();
-    if(id==='pYes'){rec(w.id,1);burst();await speak(PRAISE[Math.floor(Math.random()*PRAISE.length)]);pr.i++;rPracticar()}
-    if(id==='pTry'){rec(w.id,0);if(pr.sylMode)syl();else speak(w.say||w.w,{rate:Math.max(.55,(p.settings.rate||.9)-.15)})}
+    if(id==='pYes'){rec(w.id,1);burst();const pi=Math.floor(Math.random()*PRAISE.length);await talk([{k:'f:praise'+pi,t:PRAISE[pi]}]);pr.i++;rPracticar()}
+    if(id==='pTry'){rec(w.id,0);if(pr.sylMode)syl();else sayWord(w,{rate:Math.max(.55,(p.settings.rate||.9)-.15)})}
     if(id==='pNext'){pr.i++;rPracticar()}
   };
-  setTimeout(()=>speak(w.say||w.w),250);
+  setTimeout(()=>sayWord(w),250);
 }
 function rec(id,ok){const p=P();const s=p.stats[id]||(p.stats[id]={a:0,s:0,d:0});s.a++;if(ok)s.s++;s.d=Date.now();save()}
 
@@ -605,6 +655,7 @@ function rec(id,ok){const p=P();const s=p.stats[id]||(p.stats[id]={a:0,s:0,d:0})
 function rAgenda(){
   const p=P();p.agenda=p.agenda||[];p.done=p.done||[];
   const ord=i=>p.agenda.length===2?['Primero','Después'][i]:(i===0?'Primero':i===p.agenda.length-1?'Al final':'Después');
+  const ordK=i=>({'Primero':'f:primero','Después':'f:despues','Al final':'f:alfinal'})[ord(i)];
   const nowIdx=p.agenda.findIndex((_,i)=>!p.done.includes(i));
   let h=`<div class="${p.settings.upper?'upper':''}"><div class="panel"><h2>🗓️ Agenda visual</h2><p class="sub">Anticipa lo que va a pasar. Toca un paso para escucharlo; mantén presionado para marcarlo como hecho.</p>`;
   if(p.agenda.length){
@@ -622,10 +673,10 @@ function rAgenda(){
   $('#main').onpointerup=()=>clearTimeout(pt);
   $('#main').onclick=async e=>{
     const rm=e.target.closest('[data-rm]');if(rm){const i=+rm.dataset.rm;p.agenda.splice(i,1);p.done=[];save();rAgenda();return}
-    const s=e.target.closest('.step');if(s&&!long){const w=W(p.agenda[+s.dataset.i]);speak(`${ord(+s.dataset.i)}, ${w.say||w.w}`);return}
+    const s=e.target.closest('.step');if(s&&!long){const i=+s.dataset.i;const w=W(p.agenda[i]);talk([{k:ordK(i),t:ord(i)},wordPart(w)],{gap:200});return}
     const t=e.target.closest('#apick .tile');if(t){if(p.agenda.length>=8){toast('Máximo 8 pasos');return}p.agenda.push(t.dataset.id);save();rAgenda();return}
     const id=e.target.closest('button')?.id;
-    if(id==='aSay'){for(let i=0;i<p.agenda.length;i++){const w=W(p.agenda[i]);if(!w)continue;await speak(`${ord(i)}, ${w.say||w.w}`);await wait(250)}}
+    if(id==='aSay'){const parts=[];p.agenda.forEach((id,i)=>{const w=W(id);if(w)parts.push({k:ordK(i),t:ord(i)},wordPart(w))});await talk(parts,{gap:220})}
     if(id==='aReset'){p.done=[];save();rAgenda()}
     if(id==='aClear'){p.agenda=[];p.done=[];save();rAgenda()}
   };
@@ -663,7 +714,7 @@ function onboarding(){
    <div class="row" style="margin-top:16px"><button class="btn" id="obGo">Crear tablero ✨</button></div>
    <p class="note">Hablemos es una herramienta de apoyo para familias y terapeutas; no reemplaza la evaluación ni la terapia con un profesional del lenguaje.</p><p class="note">Pictogramas: Sergio Palao. Origen: <a href="https://arasaac.org" target="_blank" rel="noopener">ARASAAC</a>. Licencia: CC BY-NC-SA. Propiedad: Gobierno de Aragón (España).</p></div>`;
   wireForm($('#ob'));
-  $('#obGo').onclick=()=>{const p=newProfile(readForm());S.profiles.push(p);S.active=p.id;save();view='hablar';speak(`Hola ${p.name}`);render()};
+  $('#obGo').onclick=()=>{const p=newProfile(readForm());S.profiles.push(p);S.active=p.id;save();view='hablar';talk([{k:'w:hola',t:'Hola '+p.name}]);render()};
 }
 function rAjustes(){
   const p=P(),st=p.settings;
@@ -680,8 +731,12 @@ function rAjustes(){
     <div class="row" style="margin-top:14px"><button class="btn" id="pSave">Guardar y recomendar vocabulario</button><button class="btn ghost" id="pSaveOnly">Guardar sin cambiar palabras</button><button class="btn danger" id="pDel">Eliminar perfil</button></div>
   </div>
   <div class="panel"><h2>💡 Recomendaciones para las sesiones</h2><div class="tips"><ul style="margin:0;padding-left:18px">${tips.join('')}</ul></div></div>
-  <div class="panel"><h2>🔊 Voz</h2><p class="sub">${voices.length?`${voices.length} voces en español disponibles en este dispositivo.`:'No se detectaron voces en español; se usará la voz predeterminada. En Android instala “Voz de Google” y en iPhone descarga una voz en Ajustes → Accesibilidad → Contenido leído.'}</p>
-    <div class="row"><div class="field"><label>Voz</label><select id="vSel"><option value="">Automática (español latino)</option>${voices.map(v=>`<option value="${esc(v.voiceURI)}" ${v.voiceURI===st.voice?'selected':''}>${esc(v.name)} (${v.lang})</option>`).join('')}</select></div>
+  <div class="panel"><h2>🔊 Voz</h2>
+    <div class="field" style="max-width:520px"><label>Tipo de voz</label><select id="vozSel">
+      <option value="grabada" ${(st.voz||'grabada')==='grabada'?'selected':''}>Voz de Hablemos (grabada · funciona en todos los navegadores)</option>
+      <option value="dispositivo" ${st.voz==='dispositivo'?'selected':''}>Voz del dispositivo</option></select></div>
+    <p class="sub">${(st.voz||'grabada')==='grabada'?'Todas las palabras del vocabulario tienen audio grabado y claro. Las palabras propias usan tu grabación, o la voz del dispositivo si no grabaste una.':(voices.length?`${voices.length} voces en español disponibles en este dispositivo.`:'⚠️ Este navegador no ofrece voces en español (pasa en Brave y en algunos Linux). Se usará la voz de Hablemos.')}</p>
+    <div class="row"><div class="field ${(st.voz||'grabada')==='grabada'?'hidden':''}"><label>Voz del dispositivo</label><select id="vSel"><option value="">Automática (español latino)</option>${voices.map(v=>`<option value="${esc(v.voiceURI)}" ${v.voiceURI===st.voice?'selected':''}>${esc(v.name)} (${v.lang})</option>`).join('')}</select></div>
     <div class="field"><label>Velocidad: <span id="rVal">${st.rate}</span></label><input type="range" id="rate" min="0.5" max="1.2" step="0.05" value="${st.rate}"></div>
     <button class="btn ghost" id="vTest">▶ Probar</button></div>
   </div>
@@ -702,6 +757,7 @@ function rAjustes(){
     <div class="field"><label>Lo que dice la voz (opcional)</label><input id="nSay" placeholder="ej. quiero ir con Firulais"></div></div>
     <div class="row"><div class="field" style="max-width:120px"><label>Emoji</label><input id="nE" placeholder="🐕" maxlength="8"></div>
     <div class="field"><label>…o foto / pictograma</label><input id="nImg" type="file" accept="image/*"></div></div>
+    <div class="row" style="margin-bottom:10px"><button type="button" class="btn ghost" id="nRec">🎙️ Grabar mi voz</button><button type="button" class="btn ghost hidden" id="nPlay">▶ Escuchar grabación</button><label class="btn ghost" style="cursor:pointer">📁 Subir audio<input id="nAud" type="file" accept="audio/*" class="hidden"></label><span class="note" id="nRecMsg" style="margin:0"></span></div>
     <p class="note" style="margin-top:0">¿Necesitas otro pictograma? Búscalo en <a href="https://arasaac.org/pictograms/search" target="_blank" rel="noopener">arasaac.org</a> (Pictogramas → buscar → descargar PNG) y súbelo aquí.</p>
     <div class="row"><div class="field"><label>Grupo</label><select id="nC">${CATSALL().map(c=>`<option value="${c[0]}">${c[1]} ${esc(c[2])}</option>`).join('')}</select></div>
     <div class="field"><label>Tipo de palabra</label><select id="nT"><option value="n">Cosa o lugar</option><option value="p">Persona</option><option value="v">Acción</option><option value="a">Cómo es / siente</option><option value="s">Social</option><option value="q">Pregunta</option></select></div></div>
@@ -724,14 +780,16 @@ function rAjustes(){
     if(b.dataset.none){const ids=allW.filter(w=>w.c===b.dataset.none).map(w=>w.id);p.enabled=p.enabled.filter(i=>!ids.includes(i));save();keepOpen(b.dataset.none);return}
     if(b.dataset.delcat){const c=b.dataset.delcat;S.customCats=S.customCats.filter(x=>x.id!==c);const ids=S.custom.filter(w=>w.c===c).map(w=>w.id);S.custom=S.custom.filter(w=>w.c!==c);S.profiles.forEach(x=>x.enabled=x.enabled.filter(i=>!ids.includes(i)));save();rAjustes();return}
     switch(b.id){
-      case'pSave':case'pSaveOnly':{const d=readForm();Object.assign(p,d);if(b.id==='pSave'){const voice=p.settings.voice,sym=p.settings.sym;p.settings=presetSettings(p);p.settings.voice=voice;p.settings.sym=sym||'arasaac';p.enabled=recommend(p);toast(`Vocabulario recomendado: ${p.enabled.length} palabras`)}else toast('Perfil guardado');sentence=[];save();render();break}
+      case'pSave':case'pSaveOnly':{const d=readForm();Object.assign(p,d);if(b.id==='pSave'){const voice=p.settings.voice,sym=p.settings.sym,voz=p.settings.voz;p.settings=presetSettings(p);p.settings.voice=voice;p.settings.sym=sym||'arasaac';p.settings.voz=voz||'grabada';p.enabled=recommend(p);toast(`Vocabulario recomendado: ${p.enabled.length} palabras`)}else toast('Perfil guardado');sentence=[];save();render();break}
       case'pNew':{const np=newProfile({name:'Nuevo perfil'});S.profiles.push(np);S.active=np.id;save();render();toast('Perfil creado: completa sus datos');break}
       case'pDel':{if(b.dataset.sure){S.profiles=S.profiles.filter(x=>x.id!==p.id);S.active=S.profiles[0]?.id||null;save();render()}else{b.dataset.sure=1;b.textContent='Toca de nuevo para confirmar'}break}
-      case'vTest':speak(`Hola ${p.name}, ¿quieres jugar?`);break;
+      case'vTest':talk([{k:'f:test',t:`Hola ${p.name}, ¿quieres jugar?`}]);break;
       case'nAdd':{const w=$('#nW').value.trim();if(!w){toast('Escribe la palabra');return}
         const f=$('#nImg').files[0];const img=f?await fileToThumb(f):null;
-        const nw={id:'u_'+norm(w)+'_'+Date.now().toString(36),w,say:$('#nSay').value.trim()||undefined,e:$('#nE').value.trim()||'⭐',img,t:$('#nT').value,c:$('#nC').value,lvl:1,amin:0,amax:99,custom:true};
-        S.custom.push(nw);p.enabled.push(nw.id);save();toast(`“${w}” agregada`);rAjustes();break}
+        const nw={rec:newRec||undefined,id:'u_'+norm(w)+'_'+Date.now().toString(36),w,say:$('#nSay').value.trim()||undefined,e:$('#nE').value.trim()||'⭐',img,t:$('#nT').value,c:$('#nC').value,lvl:1,amin:0,amax:99,custom:true};
+        S.custom.push(nw);p.enabled.push(nw.id);newRec=null;save();toast(`“${w}” agregada`);rAjustes();break}
+      case'nRec':recToggle();break;
+      case'nPlay':if(newRec)talk([{k:'tmp'+Date.now(),t:'',data:newRec}]);break;
       case'gAdd':{const n=$('#gN').value.trim();if(!n){toast('Escribe el nombre del grupo');return}S.customCats.push({id:'c_'+Date.now().toString(36),name:n,e:$('#gE').value.trim()||'📁'});save();toast('Grupo creado: agrégale palabras');rAjustes();break}
       case'stClr':p.stats={};save();rAjustes();break;
       case'bCopy':try{await navigator.clipboard.writeText(JSON.stringify(S));toast('Respaldo copiado')}catch(_){$('#bBox').classList.remove('hidden');$('#bTxt').value=JSON.stringify(S);$('#bTxt').select();toast('Copia el texto seleccionado')}break;
@@ -743,11 +801,31 @@ function rAjustes(){
     if(e.target.id==='pSel'){S.active=e.target.value;sentence=[];pr={cat:'todas',i:0,order:[],sylMode:null};save();render();return}
     if(e.target.id==='symSel'){st.sym=e.target.value;save();rAjustes();return}
     if(e.target.id==='vSel'){st.voice=e.target.value;save();speak('Hola');return}
+    if(e.target.id==='vozSel'){st.voz=e.target.value;save();rAjustes();talk([{k:'f:test',t:'Hola, ¿quieres jugar?'}]);return}
     if(e.target.dataset.s){st[e.target.dataset.s]=e.target.checked;if(e.target.dataset.s==='big')st.big=e.target.checked?1:0;e.target.closest('.check').classList.toggle('on',e.target.checked);if(e.target.dataset.s==='syl')pr.sylMode=e.target.checked;save();applyLook()}
   };
+  const na=$('#nAud');if(na)na.onchange=()=>{const f=na.files[0];if(!f)return;if(f.size>1.5e6){toast('Audio muy largo: máximo unos segundos');return}const r=new FileReader();r.onload=()=>{newRec=r.result;$('#nPlay').classList.remove('hidden');$('#nRecMsg').textContent='Audio listo ✓'};r.readAsDataURL(f)};
   m.oninput=e=>{if(e.target.id==='rate'){st.rate=+e.target.value;$('#rVal').textContent=st.rate;save()}};
-  $('#rate').onchange=()=>speak('Así voy a hablar');
+  $('#rate').onchange=()=>talk([{k:'f:asi',t:'Así voy a hablar'}]);
   function keepOpen(c){rAjustes();const d=document.querySelector(`[data-all="${c}"]`)?.closest('details');if(d){d.open=true;d.scrollIntoView({block:'center'})}}
+}
+
+/* ============ GRABAR VOZ PROPIA ============ */
+let newRec=null,mediaRec=null,recTimer=null;
+async function recToggle(){
+  const b=$('#nRec'),msg=$('#nRecMsg');
+  if(mediaRec&&mediaRec.state==='recording'){mediaRec.stop();return}
+  if(!navigator.mediaDevices||!window.MediaRecorder){toast('Este navegador no permite grabar; usa “Subir audio”');return}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const chunks=[];mediaRec=new MediaRecorder(stream);
+    mediaRec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    mediaRec.onstop=()=>{clearTimeout(recTimer);stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:mediaRec.mimeType||'audio/webm'});const r=new FileReader();
+      r.onload=()=>{newRec=r.result;b.textContent='🎙️ Grabar de nuevo';$('#nPlay').classList.remove('hidden');msg.textContent='Grabación lista ✓';talk([{k:'tmp'+Date.now(),t:'',data:newRec}])};r.readAsDataURL(blob)};
+    mediaRec.start();b.textContent='⏹️ Detener';msg.textContent='Grabando… di la palabra';
+    recTimer=setTimeout(()=>{if(mediaRec.state==='recording')mediaRec.stop()},4000);
+  }catch(_){toast('No se pudo usar el micrófono; usa “Subir audio”')}
 }
 
 /* ============ MODO NIÑO (bloqueo) ============ */
@@ -774,6 +852,7 @@ let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n
   b.onclick=()=>{try{const fs=document.fullscreenElement||document.webkitFullscreenElement;const r=fs?ex.call(document):req.call(d);if(r&&r.catch)r.catch(()=>toast('Este navegador no permite pantalla completa aquí'))}catch(_){toast('Este navegador no permite pantalla completa aquí')}};
 })();
 /* Desbloquear la voz en iOS/Safari con el primer toque */
+document.addEventListener('pointerdown',unlockAudio,{capture:true});document.addEventListener('keydown',unlockAudio,{capture:true});
 let voiceUnlocked=false;document.addEventListener('pointerdown',()=>{if(voiceUnlocked)return;voiceUnlocked=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(_){}} ,{once:true,capture:true});
 /* Teclado: flechas para moverse entre pictogramas en computadora */
 document.addEventListener('keydown',e=>{const t=document.activeElement;if(!t||!t.classList||!t.classList.contains('tile'))return;
