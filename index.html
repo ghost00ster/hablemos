@@ -513,23 +513,31 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 /* ============ AUDIOS GRABADOS (funcionan en todos los navegadores) ============ */
 const AUD=window.HAB_AUDIO||{};
 let actx=null;const bufCache={};let curSrc=null,curEl=null,playToken=0;
-function unlockAudio(){try{if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C()}if(actx&&actx.state==='suspended')actx.resume()}catch(_){}}
+let keepAlive=null,lastAudioEnd=0;
+function unlockAudio(){try{if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C({latencyHint:'interactive'})}if(actx&&actx.state==='suspended')actx.resume();startKeepAlive()}catch(_){}}
+/* Señal inaudible que mantiene "despierto" el parlante (Android, Bluetooth), para que no se corte el inicio de las palabras */
+function startKeepAlive(){try{if(!actx||keepAlive)return;const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=40;g.gain.value=0.0003;o.connect(g);g.connect(actx.destination);o.start();keepAlive=o}catch(_){}}
+document.addEventListener('visibilitychange',()=>{try{if(!actx)return;if(document.hidden)actx.suspend();else actx.resume()}catch(_){}});
 function b64ToBuf(b){const bin=atob(b);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer}
-function stopAll(){playToken++;try{curSrc&&curSrc.stop()}catch(_){}curSrc=null;try{if(curEl){curEl.pause();curEl=null}}catch(_){}try{speechSynthesis.cancel()}catch(_){}}
+let qChain=Promise.resolve(),qLen=0;
+function stopAll(){playToken++;qChain=Promise.resolve();qLen=0;try{curSrc&&curSrc.stop()}catch(_){}curSrc=null;try{if(curEl){curEl.pause();curEl=null}}catch(_){}try{speechSynthesis.cancel()}catch(_){}}
 function decode(key,b64){
   if(bufCache[key])return bufCache[key];
   const raw=b64.startsWith('data:')?b64.split(',')[1]:b64;
   bufCache[key]=new Promise((res,rej)=>{try{const r=actx.decodeAudioData(b64ToBuf(raw),res,rej);if(r&&r.then)r.then(res,rej)}catch(e){rej(e)}});
   bufCache[key].catch(()=>{delete bufCache[key]});return bufCache[key];
 }
-async function playB64(key,b64,rate,tok){
+async function playB64(key,b64,rate,tok,skip){
   if(tok!==playToken)return;
   const pr=Math.min(1.2,Math.max(.75,rate||1));
   if(actx){
     try{
       if(actx.state==='suspended')await actx.resume();
       const buf=await decode(key,b64);if(tok!==playToken)return;
-      await new Promise(res=>{const src=actx.createBufferSource();src.buffer=buf;src.playbackRate.value=pr;src.connect(actx.destination);src.onended=res;curSrc=src;src.start(0);setTimeout(res,buf.duration/pr*1000+400)});
+      // los audios traen 0.15 s de silencio inicial y 0.2 s final; dentro de una frase se saltan para que fluya
+      const off=skip&&!key.startsWith('r:')?Math.min(.13,buf.duration/3):0,tail=skip&&!key.startsWith('r:')?.12:0;
+      const dur=Math.max(.05,buf.duration-off-tail);
+      await new Promise(res=>{let done=false;const fin=()=>{if(!done){done=true;lastAudioEnd=Date.now();res()}};const src=actx.createBufferSource();src.buffer=buf;src.playbackRate.value=pr;src.connect(actx.destination);src.onended=fin;curSrc=src;src.start(0,off,dur);setTimeout(fin,dur/pr*1000+500)});
       return;
     }catch(_){}
   }
@@ -547,17 +555,24 @@ async function talk(parts,opt={}){
   const userRate=(opt.rate||st.rate||.9)/.9;
   for(let i=0;i<parts.length;i++){
     if(tok!==playToken)return;const p=parts[i];const data=p.data||AUD[p.k];
-    if(data){await playB64(p.data?('r:'+p.k):p.k,data,opt.raw?1:userRate,tok)}
+    const warm=i>0||Date.now()-lastAudioEnd<1500;
+    if(data){await playB64(p.data?('r:'+p.k):p.k,data,opt.raw?1:userRate,tok,warm)}
     else{
       // armar la frase con palabras grabadas, si todas existen
       const ids=p.t.split(/\s+/).map(x=>wordIdx()[norm(x).replace(/_/g,'')]||wordIdx()[norm(x)]);
-      if(ids.length&&ids.every(id=>id&&AUD['w:'+id])){for(let j=0;j<ids.length;j++){if(tok!==playToken)return;await playB64('w:'+ids[j],AUD['w:'+ids[j]],userRate,tok);await wait(90)}}
+      if(ids.length&&ids.every(id=>id&&AUD['w:'+id])){for(let j=0;j<ids.length;j++){if(tok!==playToken)return;await playB64('w:'+ids[j],AUD['w:'+ids[j]],userRate,tok,warm||j>0);await wait(40)}}
       else if('speechSynthesis' in window){await speak(p.t,opt)}
     }
-    if(i<parts.length-1)await wait(opt.gap!=null?opt.gap:120);
+    if(i<parts.length-1)await wait(opt.gap!=null?opt.gap:60);
   }
 }
 const sayWord=(w,opt)=>talk([wordPart(w)],opt);
+/* Toques seguidos en el tablero: cada palabra se escucha completa, en orden (máx. 3 en espera) */
+function sayQueued(w){
+  if(qLen>=3){stopAll()}
+  qLen++;const tok=playToken;
+  qChain=qChain.then(()=>tok===playToken?talk([wordPart(w)],{keep:true}):null).catch(()=>{}).then(()=>{qLen=Math.max(0,qLen-1)});
+}
 
 /* ============ SÍLABAS ============ */
 const STRONG='aeoáéó',ACCW='íú',INSEP=['pr','br','tr','dr','cr','gr','fr','pl','bl','cl','gl','fl','kr','kl','tl'];
@@ -672,7 +687,7 @@ function rHablar(){
     const c=e.target.closest('.cat');if(c){curCat=c.dataset.c;rHablar();return}
     const t=e.target.closest('.tile');
     if(t){if(!tapOk())return;const w=W(t.dataset.id);t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash');
-      sayWord(w);logUse('t',w.id);
+      sayQueued(w);logUse('t',w.id);
       if(useStrip){if(sentence.length>=L.strip){toast(`Frase de hasta ${L.strip} palabras en este nivel`);return}sentence.push(w.id);$('#sw').innerHTML=stripHTML();const sw=$('#sw');sw.scrollLeft=sw.scrollWidth}
       return}
     if(e.target.closest('#sBack')){sentence.pop();$('#sw').innerHTML=stripHTML();return}
