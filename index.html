@@ -64,7 +64,19 @@ nav.tabs button.on{background:var(--accent-2);color:var(--accent)}
 .chip{flex:0 0 auto;width:72px;height:80px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid rgba(0,0,0,.08);background:#fff;font-weight:800;font-size:12px;animation:pop .2s ease}
 .chip .pic{font-size:34px;line-height:1.1}
 .chip img{width:50px;height:50px;object-fit:cover;border-radius:8px}
-.chip.speaking{outline:4px solid var(--accent);outline-offset:1px}
+.chip{transition:transform .18s ease,opacity .25s ease,box-shadow .18s ease}
+.chip.speaking{transform:scale(1.14) translateY(-3px);box-shadow:0 0 0 4px #FFD23F,0 6px 16px rgba(255,170,0,.45);z-index:1;opacity:1}
+.chip.said{opacity:.55}
+.chip.leaving{transform:translateY(-14px) scale(.85);opacity:0}
+.strip .words.saying{overflow:visible}
+.fitz .t-k{background:#DFF6F2;border-color:#7FD6C6}
+.tile .pic.let{font-size:calc(var(--tile-min) * .42);color:#1F5F8B;line-height:1}
+.tile .pic.let small{font-size:.55em;margin-left:.08em;color:#5C8FB0}
+.tile .pic.num{font-size:calc(var(--tile-min) * .46);color:#1F7A5C;line-height:1}
+.tile .qty{font-size:calc(var(--tile-min) * .075);letter-spacing:1px;color:#E07A1F;line-height:1.1;max-width:90%;word-break:break-all}
+.chip .pic.let,.chip .pic.num{font-size:30px;color:#1F5F8B}.chip .pic.let small{font-size:.55em}.chip .qty{display:none}
+.bigpic .pic.let,.bigpic .pic.num{font-size:min(150px,36vw);color:#1F5F8B}.bigpic{display:flex;flex-direction:column;align-items:center;justify-content:center}.bigpic .qty{font-size:28px;color:#E07A1F}
+.core .tile .qty{display:none}
 .sbtn{border:0;border-radius:16px;font-weight:900;font-size:15px;padding:0 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:64px}
 .sbtn .ic{font-size:26px}
 .sbtn.speak{background:var(--accent);color:#fff;min-width:88px}
@@ -307,7 +319,7 @@ table.st td,table.st th{padding:7px 6px;border-bottom:1px solid var(--line);text
 const CATS=[
  ['social','👋','Social'],['personas','👨‍👩‍👧','Personas'],['acciones','🏃','Acciones'],['comida','🍎','Comida'],
  ['juego','🧸','Jugar'],['sentir','😊','Sentimientos'],['lugares','🏠','Lugares'],['cuerpo','🖐️','Cuerpo'],
- ['rutinas','🪥','Rutinas'],['describir','🎨','Cómo es'],['animales','🐶','Animales'],['salvadorenas','🇸🇻','De El Salvador'],['preguntas','❓','Preguntas'],['palabritas','🔗','Palabritas']
+ ['rutinas','🪥','Rutinas'],['describir','🎨','Cómo es'],['animales','🐶','Animales'],['salvadorenas','🇸🇻','De El Salvador'],['letras','🔤','Abecedario'],['numeros','🔢','Números'],['preguntas','❓','Preguntas'],['palabritas','🔗','Palabritas']
 ];
 const RAW=[
  // social
@@ -418,6 +430,11 @@ const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[
 const AR_IMG=window.ARASAAC_IMG||{},AR_MAP=window.ARASAAC_MAP||{};
 const V2_START=RAW.findIndex(r=>r[0]==='tortilla');
 const BASE=RAW.map((r,ix)=>({id:norm(r[0])+(r[3]==='palabritas'?'_x':''),w:r[0],e:r[1],t:r[2],c:r[3],lvl:r[4],amin:r[5]||2,amax:r[6]||99,ar:AR_MAP[r[0]]||null,v:ix>=V2_START?2:1}));
+/* Abecedario y números: se muestran como letra/número grande; la voz dice su nombre */
+const LETRAS=[['A','a'],['B','be'],['C','ce'],['D','de'],['E','e'],['F','efe'],['G','ge'],['H','hache'],['I','i'],['J','jota'],['K','ka'],['L','ele'],['M','eme'],['N','ene'],['Ñ','eñe'],['O','o'],['P','pe'],['Q','cu'],['R','erre'],['S','ese'],['T','te'],['U','u'],['V','ve'],['W','doble ve'],['X','equis'],['Y','i griega'],['Z','zeta']];
+const NUMS=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte'];
+BASE.push(...LETRAS.map(([l,n])=>({id:'l_'+(l==='Ñ'?'enie':l.toLowerCase()),w:l,say:n,e:l,t:'k',c:'letras',lvl:3,amin:4,amax:99,ar:null,v:3})),
+  ...NUMS.map((n,i)=>({id:'n_'+i,w:String(i),say:n,e:String(i),t:'k',c:'numeros',lvl:i<=10?3:4,amin:i<=10?3:5,amax:99,ar:null,v:3})));
 const CORE_IDS=['yo','quiero','no','si','mas','ayuda','ya_termine'];
 
 const LEVELS=[
@@ -445,7 +462,7 @@ let S=load();
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.profiles)return s}catch(e){}return{profiles:[],active:null,custom:[],customCats:[]}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const P=()=>S.profiles.find(p=>p.id===S.active);
-const VOCAB_V=2;
+const VOCAB_V=3;
 const ALL=()=>BASE.concat(S.custom||[]);
 const CATSALL=()=>CATS.concat((S.customCats||[]).map(c=>[c.id,c.e,c.name]));
 const W=id=>ALL().find(w=>w.id===id);
@@ -551,10 +568,12 @@ const wordPart=w=>({k:'w:'+w.id,t:w.say||w.w,data:w.rec||null});
 async function talk(parts,opt={}){
   if(!opt.keep)stopAll();const tok=playToken;unlockAudio();
   const st=P()?.settings||{};const mode=st.voz||'grabada';
-  if(mode==='dispositivo'&&hasDeviceVoice()&&!parts.some(p=>p.data)){await speak(parts.map(p=>p.t).join(' '),opt);return}
+  if(mode==='dispositivo'&&hasDeviceVoice()&&!parts.some(p=>p.data)){
+    if(opt.onPart){for(let i=0;i<parts.length;i++){if(tok!==playToken)return;opt.onPart(i);await speak(parts[i].t,{...opt,queue:i>0})}return}
+    await speak(parts.map(p=>p.t).join(' '),opt);return}
   const userRate=(opt.rate||st.rate||.9)/.9;
   for(let i=0;i<parts.length;i++){
-    if(tok!==playToken)return;const p=parts[i];const data=p.data||AUD[p.k];
+    if(tok!==playToken)return;const p=parts[i];const data=p.data||AUD[p.k];if(opt.onPart)opt.onPart(i);
     const warm=i>0||Date.now()-lastAudioEnd<1500;
     if(data){await playB64(p.data?('r:'+p.k):p.k,data,opt.raw?1:userRate,tok,warm)}
     else{
@@ -607,8 +626,9 @@ const silabas=t=>t.replace(/[¡!¿?.,]/g,'').trim().split(/\s+/).map(syl1);
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function srcOf(w){if(w.img)return{src:w.img,cls:'ph'};const st=P()?.settings;if((st?.sym||'arasaac')==='arasaac'&&w.ar&&AR_IMG[w.ar])return{src:AR_IMG[w.ar],cls:'ar'};return null}
-const pic=w=>{const s=srcOf(w);if(s)return`<img class="${s.cls}" src="${s.src}" alt="">`;if(w.c==='palabritas'&&(P()?.settings.sym||'arasaac')==='arasaac')return`<span class="pic txt">${esc(w.w)}</span>`;return`<span class="pic">${w.e||'⬜'}</span>`};
-const tile=(w,extra='')=>`<button class="tile t-${w.t}" data-id="${w.id}" ${extra}>${pic(w)}<span class="lbl">${esc(w.w)}</span></button>`;
+const pic=w=>{if(w.t==='k'){if(w.c==='numeros'){const n=+w.w;return`<span class="pic txt num">${w.w}</span>${n>0&&n<=10?`<span class="qty">${'●'.repeat(n)}</span>`:''}`}return`<span class="pic txt let">${w.w}<small>${w.w.toLowerCase()}</small></span>`}const s=srcOf(w);if(s)return`<img class="${s.cls}" src="${s.src}" alt="">`;if(w.c==='palabritas'&&(P()?.settings.sym||'arasaac')==='arasaac')return`<span class="pic txt">${esc(w.w)}</span>`;return`<span class="pic">${w.e||'⬜'}</span>`};
+const lblOf=w=>w.t==='k'?w.say:w.w;
+const tile=(w,extra='')=>`<button class="tile t-${w.t}" data-id="${w.id}" ${extra}>${pic(w)}<span class="lbl">${esc(lblOf(w))}</span></button>`;
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
 function burst(){if(P()?.settings.low)return;const b=document.createElement('div');b.className='burst';
   const em=['⭐','🎉','✨','🌟','💛','🎈'];
@@ -688,7 +708,7 @@ function rHablar(){
     const t=e.target.closest('.tile');
     if(t){if(!tapOk())return;const w=W(t.dataset.id);t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash');
       sayQueued(w);logUse('t',w.id);
-      if(useStrip){if(sentence.length>=L.strip){toast(`Frase de hasta ${L.strip} palabras en este nivel`);return}sentence.push(w.id);$('#sw').innerHTML=stripHTML();const sw=$('#sw');sw.scrollLeft=sw.scrollWidth}
+      if(useStrip){if(sentence.length>=L.strip){toast(`Frase de hasta ${L.strip} palabras en este nivel`);return}sentence.push(w.id);const swEl=$('#sw');if(swEl.classList.contains('saying')){swEl.insertAdjacentHTML('beforeend',`<div class="chip t-${w.t}" data-i="${sentence.length-1}">${pic(w)}<span class="lbl">${esc(w.w)}</span></div>`)}else swEl.innerHTML=stripHTML();const sw=$('#sw');sw.scrollLeft=sw.scrollWidth}
       return}
     if(e.target.closest('#sBack')){sentence.pop();$('#sw').innerHTML=stripHTML();return}
     if(e.target.closest('#sSpeak')){await sayStrip();return}
@@ -698,16 +718,24 @@ function rHablar(){
   if(sb){sb.onpointerdown=()=>{pressT=setTimeout(()=>{sentence=[];$('#sw').innerHTML=stripHTML();toast('Frase borrada')},700)};sb.onpointerup=sb.onpointerleave=()=>clearTimeout(pressT)}
 }
 function stripHTML(){
-  if(!sentence.length)return`<span class="ph">Toca pictogramas para armar tu frase…</span>`;
-  return sentence.map((id,i)=>{const w=W(id);return w?`<div class="chip t-${w.t}" data-i="${i}">${pic(w)}<span class="lbl">${esc(w.w)}</span></div>`:''}).join('');
+  if(!sentence.length)return`<span class="ph">${lastSentence.length?'Toca <b>Decir</b> para repetir la última frase, o arma una nueva…':'Toca pictogramas para armar tu frase…'}</span>`;
+  return sentence.map((id,i)=>{const w=W(id);return w?`<div class="chip t-${w.t}" data-i="${i}">${pic(w)}<span class="lbl">${esc(w.t==='k'?w.w:w.w)}</span></div>`:''}).join('');
 }
+let lastSentence=[];
 async function sayStrip(){
-  if(!sentence.length)return;
-  const chips=[...document.querySelectorAll('#sw .chip')];
-  if(sentence.length>=2)logUse('f');
-  chips.forEach(c=>c.classList.add('speaking'));
-  await talk(sentence.map(id=>wordPart(W(id))));
-  chips.forEach(c=>c.classList.remove('speaking'));
+  if(!sentence.length){if(!lastSentence.length)return;sentence=lastSentence.slice();$('#sw').innerHTML=stripHTML()}
+  const ids=sentence.slice();const chips=[...document.querySelectorAll('#sw .chip')];
+  stopAll();const tok=playToken;
+  if(ids.length>=2)logUse('f');
+  const sw=$('#sw');sw.classList.add('saying');
+  await talk(ids.map(id=>wordPart(W(id))),{keep:true,onPart:i=>{chips.forEach((c,j)=>{c.classList.toggle('speaking',j===i);c.classList.toggle('said',j<i)});const c=chips[i];if(c&&c.scrollIntoView)try{c.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'})}catch(_){}}});
+  sw.classList.remove('saying');
+  if(tok!==playToken){chips.forEach(c=>c.classList.remove('speaking','said'));return}   // se interrumpió
+  chips.forEach(c=>{c.classList.remove('speaking');c.classList.add('said')});
+  lastSentence=ids;await wait(450);
+  chips.forEach(c=>c.classList.add('leaving'));await wait(320);
+  sentence=sentence.slice(ids.length);   // conserva lo que se tocó mientras hablaba
+  const s2=$('#sw');if(s2)s2.innerHTML=stripHTML();
 }
 
 /* ============ PRACTICAR ============ */
@@ -802,7 +830,7 @@ const GAMES=[
  {id:'grupo',e:'🗂️',name:'¿De qué grupo es?',area:'Categorías',desc:'Encuentra la comida, el animal, la parte del cuerpo…'},
  {id:'memo',e:'🃏',name:'Memoria',area:'Atención y vocabulario',desc:'Voltea las tarjetas y encuentra las parejas.'}
 ];
-const GROUP_Q={comida:['¿Cuál es comida?'],animales:['¿Cuál es un animal?'],cuerpo:['¿Cuál es una parte del cuerpo?'],lugares:['¿Cuál es un lugar?'],personas:['¿Cuál es una persona?'],juego:['¿Cuál es para jugar?'],sentir:['¿Cuál es un sentimiento?'],rutinas:['¿Cuál es de la rutina diaria?']};
+const GROUP_Q={numeros:['¿Cuál es un número?'],letras:['¿Cuál es una letra?'],comida:['¿Cuál es comida?'],animales:['¿Cuál es un animal?'],cuerpo:['¿Cuál es una parte del cuerpo?'],lugares:['¿Cuál es un lugar?'],personas:['¿Cuál es una persona?'],juego:['¿Cuál es para jugar?'],sentir:['¿Cuál es un sentimiento?'],rutinas:['¿Cuál es de la rutina diaria?']};
 const GAME_CATS_EXCL=['social','palabritas','preguntas','salvadorenas','describir'];
 const SAME=[['perro','chucho'],['maestra','la_seno'],['hermano','cipote'],['hermana','cipota'],['bano','pipi','popo']];
 let G={game:null};
@@ -827,6 +855,7 @@ function rJuegos(){
 function groupCats(){const pool=gamePool();return Object.keys(GROUP_Q).filter(c=>pool.some(w=>w.c===c)&&pool.filter(w=>w.c!==c).length>=2)}
 function newRound(){
   const pool=gamePool();G.errors=0;G.done=false;
+  const kpool=pool;if(G.game!=='grupo'){pool.splice(0,pool.length,...pool.filter(w=>w.t!=='k'))}
   if(G.game==='memo'){const n=[2,3,4,6,8][P().level-1];const ws=[];for(const w of shuffle(pool.slice())){if(ws.length>=n)break;if(!ws.some(o=>clash(o,w)))ws.push(w)}G.cards=shuffle(ws.concat(ws).map((w,i)=>({id:w.id,k:i,open:false,done:false})));G.moves=0;G.sel=[];render();return}
   if(G.round>=G.total){render();return}
   if(G.game==='toca'){
@@ -1028,7 +1057,7 @@ function rAjustes(){
   <div class="checks">
     ${[['fitz','Colores por tipo de palabra (clave Fitzgerald)'],['upper','Texto en MAYÚSCULAS'],['low','Baja estimulación (sin animaciones, colores suaves)'],['deb','Evitar toques repetidos accidentales'],['big','Pictogramas más grandes'],['syl','Practicar por sílabas al repetir']].map(([k,l])=>`<label class="check ${st[k]?'on':''}"><input type="checkbox" data-s="${k}" ${st[k]?'checked':''}><span>${l}</span></label>`).join('')}
   </div>
-  <div class="legend"><span style="background:#FFF4C2;border-color:var(--p)">Personas</span><span style="background:#DDF5DD;border-color:var(--v)">Acciones</span><span style="background:#FFE6CF;border-color:var(--n)">Cosas y lugares</span><span style="background:#DDEEFF;border-color:var(--a)">Cómo es / siente</span><span style="background:#FFE0EC;border-color:var(--s)">Social</span><span style="background:#ECE3FF;border-color:var(--q)">Preguntas</span><span style="background:#F2F2F2;border-color:var(--x)">Palabritas</span></div></div>
+  <div class="legend"><span style="background:#FFF4C2;border-color:var(--p)">Personas</span><span style="background:#DDF5DD;border-color:var(--v)">Acciones</span><span style="background:#FFE6CF;border-color:var(--n)">Cosas y lugares</span><span style="background:#DDEEFF;border-color:var(--a)">Cómo es / siente</span><span style="background:#FFE0EC;border-color:var(--s)">Social</span><span style="background:#ECE3FF;border-color:var(--q)">Preguntas</span><span style="background:#F2F2F2;border-color:var(--x)">Palabritas</span><span style="background:#DFF6F2;border-color:#7FD6C6">Letras y números</span></div></div>
   <div class="panel"><h2>🧩 Grupos de palabras</h2><p class="sub">Toca una palabra para activarla o desactivarla en el tablero de ${esc(p.name)}. Activas: <b>${p.enabled.length}</b>.</p>
     ${CATSALL().map(c=>{const ws=allW.filter(w=>w.c===c[0]);if(!ws.length&&!c[0].startsWith('c_'))return'';const on=ws.filter(w=>p.enabled.includes(w.id)).length;
       return`<details class="grp"><summary><span style="font-size:22px">${c[1]}</span>${esc(c[2])}<span class="cnt">${on}/${ws.length}</span></summary>
@@ -1126,12 +1155,11 @@ async function recToggle(){
 let rsT;const onResize=()=>{clearTimeout(rsT);rsT=setTimeout(()=>{if(P())applyLook()},120)};
 window.addEventListener('resize',onResize);
 /* Agregar el vocabulario nuevo a perfiles existentes */
-S.profiles.forEach(p=>{if((p.vocabV||1)<VOCAB_V){const rec=recommend(p);BASE.filter(w=>w.v===2&&rec.includes(w.id)&&!p.enabled.includes(w.id)).forEach(w=>p.enabled.push(w.id));p.vocabV=VOCAB_V}});save();window.addEventListener('orientationchange',onResize);
+S.profiles.forEach(p=>{if((p.vocabV||1)<VOCAB_V){const rec=recommend(p);BASE.filter(w=>(w.v||1)>(p.vocabV||1)&&rec.includes(w.id)&&!p.enabled.includes(w.id)).forEach(w=>p.enabled.push(w.id));p.vocabV=VOCAB_V}});save();window.addEventListener('orientationchange',onResize);
 try{screen.orientation&&screen.orientation.addEventListener('change',onResize)}catch(_){}
 /* Evitar menú contextual / lupa al mantener presionado en tablets y celulares */
 document.addEventListener('contextmenu',e=>{if(e.target.closest('.tile,.chip,.step,#lockBtn,#sBack,.bigpic'))e.preventDefault()});
-/* Evitar zoom con doble toque en iOS antiguos */
-let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTouch<350&&e.target.closest('.tile,.sbtn,.chip'))e.preventDefault();lastTouch=n},{passive:false});
+/* El zoom por doble toque se evita con touch-action:manipulation (CSS), sin bloquear toques rápidos */
 /* Pantalla completa (tablets, computadoras y Android; iPhone no lo permite) */
 (function(){const b=$('#fsBtn');const d=document.documentElement;
   const req=d.requestFullscreen||d.webkitRequestFullscreen;const ex=document.exitFullscreen||document.webkitExitFullscreen;
